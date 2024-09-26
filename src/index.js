@@ -3,9 +3,7 @@ import * as THREE from 'three';
 let renderer, scene, camera, container;
 let originalPosition, sphere, analyser;
 
-let audio; 
-
-let fftSize = 4096;
+let data = []; 
 
 const startButton = document.getElementById('startButton');
 startButton.addEventListener('click', init);
@@ -18,22 +16,17 @@ function init() {
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    scene.background = new THREE.Color(0xffffff);
+    scene.background = new THREE.Color(0x000000);
 
-    //const ambient = new THREE.HemisphereLight(0xffffff, 1);
-    //scene.add(ambient);
+    const ambient = new THREE.HemisphereLight(0xffffff, 1);
+    scene.add(ambient);
 
-    const geometry = new THREE.SphereGeometry(15, 48, 48); // Aumenta el detalle de la esfera
+    const geometry = new THREE.SphereGeometry(15, 64, 64); // Aumenta el detalle de la esfera
 
-
-    
-    const material = new THREE.MeshBasicMaterial( {
-
-        color: 0x0e0e0e,
-        wireframe: true
-
+    const material = new THREE.MeshStandardMaterial( {
+        color: 0xffffff,
+        // wireframe: true
     } );
-
 
     const positionAttribute = geometry.attributes.position;
     originalPosition = Float32Array.from(positionAttribute.array); // Guardamos las posiciones originales
@@ -41,40 +34,37 @@ function init() {
     sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
-    camera.position.z = 50;
-
-    const listener = new THREE.AudioListener();
-    camera.add(listener);
-
-    audio = new THREE.Audio(listener);
-    const file = '/voice.mp3';
-
-    const loader = new THREE.AudioLoader();
-    loader.load(file, function (buffer) {
-        audio.setBuffer(buffer);
-        audio.play();
-    });
-
-    analyser = new THREE.AudioAnalyser(audio, fftSize);
+    camera.position.z = 100;
 
     renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setAnimationLoop(animate);
 
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 4096; // Tamaño de FFT
+        const bufferLength = analyser.frequencyBinCount; 
+        data = new Uint8Array(bufferLength);   
+        source.connect(analyser);
+        console.log("Mic activado")
+        renderer.setAnimationLoop(animate);
+    })
+    .catch(err => {
+        console.log('Error al acceder al micrófono: ', err);
+    });
+
 }
 
 function animate() {
-    let data; 
     
-    if(audio.isPlaying){    
-        analyser.getFrequencyData();
-        data = analyser.getFrequencyData();
-    } else {
-        data = [1]; 
-    }
+    analyser.getByteFrequencyData(data); 
+
     // Calcular la intensidad promedio del sonido
     const avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
     sphere.rotation.x += 0.0009 ; 
@@ -82,9 +72,10 @@ function animate() {
 
     const positionAttribute = sphere.geometry.attributes.position;
     const position = positionAttribute.array;
+    const time = performance.now() * 0.001 ;
 
-    const time = performance.now() * 0.001 * (avgFrequency/500);
-    const noiseStrength = 0.2;  // Ajustamos la fuerza de la oscilación, más suave
+    //const time = performance.now() * 0.01 * (avgFrequency/500);
+    const noiseStrength = 0.4;  // Ajustamos la fuerza de la oscilación, más suave
     const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
 
     // Escalar la esfera según la intensidad promedio del sonido
@@ -102,7 +93,7 @@ function animate() {
         const freqValue = data[i % data.length] / 256;
 
         // Curva exponencial para amplificar la respuesta del sonido, pero más suave
-        const audioOffset = Math.pow(freqValue, 4) * freqStrength;
+        const audioOffset = Math.pow(freqValue, 1) * freqStrength;
 
         // Aplicamos oscilaciones sinusoidales más suaves
         const sineOffset = Math.sin(origX * 0.2 + time) * noiseStrength +
