@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 let renderer, scene, camera, container;
-let originalPosition, sphere, analyser;
+let originalPosition, points, analyser, rectGroup;
 
 let data = []; 
 
@@ -21,18 +21,23 @@ function init() {
     const ambient = new THREE.HemisphereLight(0xffffff, 1);
     scene.add(ambient);
 
+    // Crear una geometría de esfera y un material de puntos
     const geometry = new THREE.SphereGeometry(15, 64, 64); // Aumenta el detalle de la esfera
 
-    const material = new THREE.MeshStandardMaterial( {
+    // Usamos PointsMaterial para las partículas
+    const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        // wireframe: true
-    } );
+        size: 0.3, // Tamaño de las partículas
+        sizeAttenuation: true
+    });
 
+    // Guardamos las posiciones originales de los vértices de la geometría
     const positionAttribute = geometry.attributes.position;
     originalPosition = Float32Array.from(positionAttribute.array); // Guardamos las posiciones originales
 
-    sphere = new THREE.Mesh(geometry, material);
-    scene.add(sphere);
+    // Creamos el sistema de partículas usando las posiciones de la esfera
+    points = new THREE.Points(geometry, material);
+    scene.add(points);
 
     camera.position.z = 100;
 
@@ -43,6 +48,12 @@ function init() {
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
+    // Crear y añadir rectángulos flotantes
+    rectGroup = new THREE.Group(); // Grupo para contener los rectángulos
+    createFloatingRectangles(5); // Puedes ajustar el número de rectángulos
+    scene.add(rectGroup);
+
+    // Activar el micrófono y obtener los datos de frecuencia
     navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream => {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -56,10 +67,37 @@ function init() {
         renderer.setAnimationLoop(animate);
     })
     .catch(err => {
-        console.log('Error al acceder al micrófono: ', err);
+        console.log('Error al acceder al mic: ', err);
     });
 
 }
+
+function createFloatingRectangles(num) {
+    for (let i = 0; i < num; i++) {
+        const width = Math.random() * 40 + 25;  
+        const height = Math.random() * 40 + 25; 
+
+        const rectGeometry = new THREE.PlaneGeometry(width, height);
+        const edges = new THREE.EdgesGeometry(rectGeometry); 
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const wireframe = new THREE.LineSegments(edges, lineMaterial);
+
+        wireframe.position.set(
+            (Math.random() - 0.5) * 200,  
+            (Math.random() - 0.1) * 20,  
+            (Math.random() - 0.5) * 200  
+        );
+
+        wireframe.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+
+        rectGroup.add(wireframe); 
+    }
+}
+
 
 function animate() {
     
@@ -67,18 +105,16 @@ function animate() {
 
     // Calcular la intensidad promedio del sonido
     const avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
-    sphere.rotation.x += 0.0009 ; 
-    sphere.rotation.y -= 0.0016 ;
+    points.rotation.x += 0.0009 ; 
+    points.rotation.y -= 0.0016 ;
 
-    const positionAttribute = sphere.geometry.attributes.position;
+    const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
     const time = performance.now() * 0.001 ;
 
-    //const time = performance.now() * 0.01 * (avgFrequency/500);
-    const noiseStrength = 0.4;  // Ajustamos la fuerza de la oscilación, más suave
+    const noiseStrength = 0.4;  // Ajustamos la fuerza de la oscilación
     const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
 
-    // Escalar la esfera según la intensidad promedio del sonido
     const minScale = 0.77; // Escala mínima cuando no hay sonido
     const maxScale = 1 + avgFrequency / 256; // Escala máxima cuando hay mucho sonido
     const scaleMultiplier = THREE.MathUtils.lerp(minScale, maxScale, avgFrequency / 256);
@@ -92,15 +128,14 @@ function animate() {
         // Obtenemos el valor de frecuencia normalizado para este vértice
         const freqValue = data[i % data.length] / 256;
 
-        // Curva exponencial para amplificar la respuesta del sonido, pero más suave
+        // Curva exponencial para amplificar la respuesta del sonido
         const audioOffset = Math.pow(freqValue, 1) * freqStrength;
 
-        // Aplicamos oscilaciones sinusoidales más suaves
+        // Aplicamos oscilaciones sinusoidales
         const sineOffset = Math.sin(origX * 0.2 + time) * noiseStrength +
                            Math.cos(origY * 0.2 + time) * noiseStrength +
                            Math.sin(origZ * 0.2 + time) * noiseStrength;
 
-        // Combinamos la deformación por audio con la oscilación orgánica suave
         const totalOffset = sineOffset + audioOffset;
 
         // Usamos lerp para suavizar la transición en los vértices
@@ -112,12 +147,13 @@ function animate() {
     positionAttribute.needsUpdate = true;
 
     // Escalar la esfera según la intensidad promedio del sonido
-    sphere.scale.set(scaleMultiplier, scaleMultiplier, scaleMultiplier);
+    points.scale.set(scaleMultiplier*4, scaleMultiplier*4, scaleMultiplier*4);
+
+    rectGroup.rotation.x += 0.0009;
+    rectGroup.rotation.y += 0.0016;
 
     render();
 }
-
-
 
 function render() {
     renderer.render(scene, camera);

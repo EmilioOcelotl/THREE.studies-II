@@ -1,0 +1,8 @@
+body {
+    background-color: black;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    font-size: 16px; 
+    color: #f7f8f9;
+    line-height: 16px;
+}
