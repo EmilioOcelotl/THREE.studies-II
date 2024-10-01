@@ -14,5 +14,9 @@
     "parcel": "^2.12.0",
     "three": "^0.168.0",
     "treslib": "^1.0.0"
+  },
+  "devDependencies": {
+    "events": "^3.3.0",
+    "process": "^0.11.10"
   }
 }
