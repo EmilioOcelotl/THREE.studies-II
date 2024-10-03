@@ -9,7 +9,7 @@ const audioloader = new FreeSoundAudioLoader(apiKey)
 
 const socket = new WebSocket(`ws://127.0.0.1:8080`);
 
-let rec; 
+let rec, g1 = new Grain(audioCtx); 
 
 socket.onmessage = (event) => {
   const oscMsg = JSON.parse(event.data);
@@ -37,11 +37,29 @@ socket.onmessage = (event) => {
   if(oscMsg.address == "/test"){
     let audioSource = audioCtx.createBufferSource();
     audioSource.buffer = rec.getRecordedBuffer();
-    console.log(audioSource.buffer)
     audioSource.connect(audioCtx.destination); 
     audioSource.start(0);
     console.log("prueba")
+  }
 
+  if(oscMsg.address == "/g1set"){
+    g1.set(rec.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
+    console.log("g1 set")
+  }
+
+  if(oscMsg.address == "/g1start"){ 
+    g1.start(); 
+    console.log("inicia g1")
+  }
+
+  if(oscMsg.address == "/g1stop"){
+    g1.stop();
+    console.log("termina g1")
+ 
+  }
+
+  if(oscMsg.address == "/g1gain"){
+    g1.gain = oscMsg.numarg[0]; 
   }
 
 };
