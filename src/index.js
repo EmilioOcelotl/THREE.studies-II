@@ -5,19 +5,29 @@ import { EffectComposer } from '../jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from '../jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import Hydra from 'hydra-synth'
+import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
+import { GLoop, Grain, AudioBufferRecorder, FreeSoundSearch, FreesoundAudioLoader } from 'treslib'; 
 
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
 
 let data = [];
 
-let ring, curve;
+let ring, ring2, ring3, curve, curve2, curve3;
 let composer;
 
 let cubos = [];
 
-let avgFrequency;
-let avgCount = 0; 
+let avgFrequency, avgCount = 0;
+
+let label, label2, label3;
+
+const socket = new WebSocket('ws://localhost:8080');
+
+socket.onmessage = (event) => {
+  const oscMsg = JSON.parse(event.data);
+  console.log('Mensaje OSC recibido en la web:', oscMsg);
+};
 
 const hydra = new Hydra({
     canvas: document.getElementById("myCanvas"),
@@ -36,6 +46,9 @@ function init() {
     const overlay = document.getElementById('overlay');
     overlay.remove();
 
+    const credits = document.getElementById('credits');
+    credits.remove();
+
     document.getElementById('container').style.display = "block";
 
     scene = new THREE.Scene();
@@ -49,18 +62,15 @@ function init() {
     // Crear una geometría de esfera y un material de puntos
     const geometry = new THREE.SphereGeometry(15, 64, 64); // Aumenta el detalle de la esfera
 
-    // Usamos PointsMaterial para las partículas
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
         size: 0.5, // Tamaño de las partículas
         sizeAttenuation: true
     });
 
-    // Guardamos las posiciones originales de los vértices de la geometría
     const positionAttribute = geometry.attributes.position;
     originalPosition = Float32Array.from(positionAttribute.array); // Guardamos las posiciones originales
 
-    // Creamos el sistema de partículas usando las posiciones de la esfera
     points = new THREE.Points(geometry, material);
     scene.add(points);
 
@@ -73,12 +83,10 @@ function init() {
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    // Crear y añadir rectángulos flotantes
     rectGroup = new THREE.Group(); // Grupo para contener los rectángulos
     createFloatingRectangles(10); // Puedes ajustar el número de rectángulos
     scene.add(rectGroup);
 
-    // Activar el micrófono y obtener los datos de frecuencia
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -99,31 +107,56 @@ function init() {
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
         new THREE.Vector3(0, -50, -10),
-        new THREE.Vector3(100, 0, -10),
+        new THREE.Vector3(100, 0, 100),
         new THREE.Vector3(50, 50, -10),
+        new THREE.Vector3(-100, -150, -100),
+
     ];
 
     curve = new THREE.CatmullRomCurve3(pointsCurve, true);
 
     // Generar la geometría de tubo
-    const geometryTube = new THREE.TubeGeometry(curve, 200, 0.25, 8, false);
-    const materialTube = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: false });
+    const geometryTube = new THREE.TubeGeometry(curve, 400, 0.25, 8, false);
+    const materialTube = new THREE.MeshBasicMaterial({ color: 0x8282ff, wireframe: false });
     const tube = new THREE.Mesh(geometryTube, materialTube);
     scene.add(tube);
 
+    // Crear el primer tubo complementario (reflejado en el eje Y)
+    const complementPoints1 = pointsCurve.map(point => new THREE.Vector3(point.x, -point.y, point.z));
+    curve2 = new THREE.CatmullRomCurve3(complementPoints1, true);
+    const geometryTubeComplement1 = new THREE.TubeGeometry(curve2, 400, 0.25, 8, false);
+    const materialTubeComplement1 = new THREE.MeshBasicMaterial({ color: 0xff82ff, wireframe: false }); // Color complementario
+    const tubeComplement1 = new THREE.Mesh(geometryTubeComplement1, materialTubeComplement1);
+    scene.add(tubeComplement1);
+
+    // Crear el segundo tubo complementario (reflejado en el eje Z)
+    const complementPoints2 = pointsCurve.map(point => new THREE.Vector3(point.x, point.y, -point.z));
+    curve3 = new THREE.CatmullRomCurve3(complementPoints2, true);
+    const geometryTubeComplement2 = new THREE.TubeGeometry(curve3, 400, 0.25, 8, false);
+    const materialTubeComplement2 = new THREE.MeshBasicMaterial({ color: 0x82ff82, wireframe: false }); // Otro color complementario
+    const tubeComplement2 = new THREE.Mesh(geometryTubeComplement2, materialTubeComplement2);
+    scene.add(tubeComplement2);
+
     const cylinderGeometry = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0x8282ff });
     ring = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
     scene.add(ring);
 
-    // Post-proceso con EffectComposer
+    const cylinderGeometry2 = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
+    const cylinderMaterial2 = new THREE.MeshBasicMaterial({ color: 0xff82ff });
+    ring2 = new THREE.Mesh(cylinderGeometry2, cylinderMaterial2);
+    scene.add(ring2);
+
+    const cylinderGeometry3 = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
+    const cylinderMaterial3 = new THREE.MeshBasicMaterial({ color: 0x82ff82 });
+    ring3 = new THREE.Mesh(cylinderGeometry3, cylinderMaterial3);
+    scene.add(ring3);
+
     composer = new EffectComposer(renderer);
 
-    // RenderPass para renderizar la escena original
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
 
-    // UnrealBloomPass para agregar el efecto de "bloom"
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         1, // Intensidad del bloom
@@ -133,9 +166,9 @@ function init() {
 
     composer.addPass(bloomPass);
 
-    osc(15, 0.1, 1)
-        .kaleid(7)
-        .color(0.33, 0.33, 0.33)
+    osc(15, 0.1, 0)
+        .kaleid(70)
+        .color(0.5102, 0.5102, 1)
         .rotate(0, 0.1)
         .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
         .scale(1.01)
@@ -143,6 +176,44 @@ function init() {
 
     createCubes();
 
+    labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0px';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    document.getElementById('container').appendChild(labelRenderer.domElement);
+
+    let labeltext = document.createElement('div');
+    labeltext.className = 'label';
+    // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
+    labeltext.style.padding = '10px';
+    labeltext.style.borderRadius = '10px';
+    labeltext.style.margin = '25px'; // Ajusta el margen según sea necesario
+    labeltext.style.color = 'rgb(130, 130, 255)'; // Cambia a azul oscuro
+    label = new CSS2DObject(labeltext);
+    scene.add(label);
+
+    //labeltext.style.border = '2px solid rgba(255, 255, 255, 1)'; // Contorno negro
+    let labeltext2 = document.createElement('div');
+    labeltext2.className = 'label';
+    // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
+    labeltext2.style.padding = '10px';
+    labeltext2.style.borderRadius = '10px';
+    labeltext2.style.margin = '25px'; // Ajusta el margen según sea necesario
+    labeltext2.style.color = 'rgb(255, 130, 255)'; // Cambia a azul oscuro
+    label2 = new CSS2DObject(labeltext2);
+    scene.add(label2);
+
+    //labeltext.style.border = '2px solid rgba(255, 255, 255, 1)'; // Contorno negro
+    let labeltext3 = document.createElement('div');
+    labeltext3.className = 'label';
+    // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
+    labeltext3.style.padding = '10px';
+    labeltext3.style.borderRadius = '10px';
+    labeltext3.style.margin = '25px'; // Ajusta el margen según sea necesario
+    labeltext3.style.color = 'rgb(130, 255, 130)'; // Cambia a azul oscuro
+    label3 = new CSS2DObject(labeltext3);
+    scene.add(label3);
 }
 
 function createCubes() {
@@ -153,46 +224,43 @@ function createCubes() {
     const ysize = 500 / ygrid;
     let materials = [];
 
-  
-  
+
+
     let cubeCount = 0;
     let radius = 400; // Radio de la esfera
     const totalCubes = xgrid * ygrid; // Número total de cubos
     const phi = (1 + Math.sqrt(5)) / 2; // Proporción áurea
-    
+
     for (let i = 0; i < xgrid; i++) {
         for (let j = 0; j < ygrid; j++) {
-    
+
             const geometry = new THREE.BoxGeometry(20, 20, 2);
             change_uvs(geometry, ux, uy, i, j);
-    
+
             materials[cubeCount] = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
             let material2 = materials[cubeCount];
-    
+
             cubos[cubeCount] = new THREE.Mesh(geometry, material2);
-    
-            const index = cubeCount; 
-            const theta = 2 * Math.PI * index / phi; 
-            const phiAngle = Math.acos(1 - 2 * index / totalCubes); 
-    
+
+            const index = cubeCount;
+            const theta = 2 * Math.PI * index / phi;
+            const phiAngle = Math.acos(1 - 2 * index / totalCubes);
+
             const x = radius * Math.sin(phiAngle) * Math.cos(theta);
             const y = radius * Math.sin(phiAngle) * Math.sin(theta);
             const z = radius * Math.cos(phiAngle);
-    
+
             cubos[cubeCount].position.set(x, y, z);
-    
+
             cubos[cubeCount].scale.x = Math.random() * 8 + 5;
             cubos[cubeCount].scale.y = Math.random() * 8 + 5;
-    
+
             cubos[cubeCount].lookAt(0, 0, 0);
-    
+
             scene.add(cubos[cubeCount]);
             cubeCount++;
         }
     }
-    
-    console.log(cubeCount);
-    
 }
 
 function change_uvs(geometry, unitx, unity, offsetx, offsety) {
@@ -207,8 +275,8 @@ function change_uvs(geometry, unitx, unity, offsetx, offsety) {
 }
 
 function createFloatingRectangles(num) {
-    const radius = 100; // Radio de la esfera
-    const phi = (1 + Math.sqrt(5)) / 2; // Proporción áurea para distribución
+    const radius = 100; 
+    const phi = (1 + Math.sqrt(5)) / 2; 
 
     for (let i = 0; i < num; i++) {
         const width = Math.random() * 40 + 25;
@@ -216,7 +284,7 @@ function createFloatingRectangles(num) {
 
         const rectGeometry = new THREE.PlaneGeometry(width, height);
         const edges = new THREE.EdgesGeometry(rectGeometry);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2});
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
         const wireframe = new THREE.LineSegments(edges, lineMaterial);
 
         const theta = 2 * Math.PI * i / phi; // Ángulo azimutal
@@ -227,24 +295,20 @@ function createFloatingRectangles(num) {
         const z = radius * Math.cos(phiAngle);
 
         wireframe.position.set(x, y, z);
-
         wireframe.lookAt(0, 0, 0);
-
         rectGroup.add(wireframe);
     }
 }
-
 
 function animate() {
 
     analyser.getByteFrequencyData(data);
 
-    // Calcular la intensidad promedio del sonido
-    avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
-    //points.rotation.x += 0.0009 ; 
-    // points.rotation.y -= 0.0016 ;
+    // data = analyser.getByte...
 
-    avgCount = (avgCount + avgFrequency)*1; 
+    avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
+
+    avgCount = (avgCount + avgFrequency) * 1;
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
@@ -270,9 +334,9 @@ function animate() {
         const audioOffset = Math.pow(freqValue, 1) * freqStrength;
 
         // Aplicamos oscilaciones sinusoidales
-        const sineOffset = Math.sin(origX * 0.3 + time) * noiseStrength +
-            Math.cos(origY * 0.3 + time) * noiseStrength +
-            Math.sin(origZ * 0.3 + time) * noiseStrength;
+        const sineOffset = Math.sin(origX * 0.3 + (avgCount/1000)) * noiseStrength +
+            Math.cos(origY * 0.3 + + (avgCount/1000)) * noiseStrength +
+            Math.sin(origZ * 0.3 + + (avgCount/1000)) * noiseStrength;
 
         const totalOffset = sineOffset + audioOffset;
 
@@ -285,12 +349,12 @@ function animate() {
     positionAttribute.needsUpdate = true;
 
     // Escalar la esfera según la intensidad promedio del sonido
-    points.scale.set(scaleMultiplier * 8, scaleMultiplier * 8, scaleMultiplier * 8);
+    points.scale.set(scaleMultiplier * 7, scaleMultiplier * 7, scaleMultiplier * 7);
 
     //rectGroup.rotation.x += 0.0009;
     //rectGroup.rotation.y -= 0.0016;
 
-    const stime = ((avgCount*0.05) % 5000) / 5000;  // tiempo para mover el anillo
+    const stime = ((avgCount * 0.5) % 5000) / 5000;  // tiempo para mover el anillo
 
     const point = curve.getPointAt(stime);     // obtener el punto en la curva
     const tangent = curve.getTangentAt(stime); // obtener la dirección en el punto
@@ -301,21 +365,47 @@ function animate() {
     const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, tangent);
     ring.quaternion.copy(quaternion);
 
-    // Movimiento sinusoidal en X, Y y Z
+    const point2 = curve2.getPointAt(stime);     // obtener el punto en la curva
+    const tangent2 = curve2.getTangentAt(stime); // obtener la dirección en el punto
+
+    ring2.position.set(point2.x, point2.y, point2.z);
+
+    const axis2 = new THREE.Vector3(0, 1, 0); // eje inicial del cilindro
+    const quaternion2 = new THREE.Quaternion().setFromUnitVectors(axis2, tangent2);
+    ring2.quaternion.copy(quaternion2);
+
+    const point3 = curve3.getPointAt(stime);     // obtener el punto en la curva
+    const tangent3 = curve3.getTangentAt(stime); // obtener la dirección en el punto
+
+    ring3.position.set(point3.x, point3.y, point3.z);
+
+    const axis3 = new THREE.Vector3(0, 1, 0); // eje inicial del cilindro
+    const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
+    ring3.quaternion.copy(quaternion3);
+
     const amplitudeX = 100; // Amplitud mayor en X
     const amplitudeY = 20;  // Amplitud menor en Y
     const amplitudeZ = 100;  // Amplitud media en Z
 
     const frequency = 0.125; // Frecuencia baja para movimientos suaves
 
-    // Actualizar posición de la cámara usando sinusoides
     camera.position.x = amplitudeX * Math.sin(time * frequency);
     camera.position.y = amplitudeY * Math.sin(time * frequency * 0.5); // Movimiento más lento en Y
     camera.position.z = amplitudeZ * Math.cos(time * frequency);
 
-    // Apuntar siempre al centro (en este caso, al cubo)
     camera.lookAt(ring.position);
     vit.needsUpdate = true;
+
+    label.position.copy(ring.position);
+    label.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring.position.x.toFixed(2)} y: ${ring.position.y.toFixed(2)} z: ${ring.position.z.toFixed(2)}<br><br><br><br><br><br>`;
+
+    label2.position.copy(ring2.position);
+    label2.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring2.position.x.toFixed(2)} y: ${ring2.position.y.toFixed(2)} z: ${ring2.position.z.toFixed(2)}<br><br><br><br><br><br>`;
+
+    label3.position.copy(ring3.position);
+    label3.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring3.position.x.toFixed(2)} y: ${ring3.position.y.toFixed(2)} z: ${ring3.position.z.toFixed(2)}<br><br><br><br><br><br>`;
+
+    labelRenderer.render(scene, camera);
 
     render();
     composer.render();
@@ -324,4 +414,5 @@ function animate() {
 
 function render() {
     renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
 }
