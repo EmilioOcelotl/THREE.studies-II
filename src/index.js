@@ -6,7 +6,8 @@ import { RenderPass } from '../jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
-import { GLoop, Grain, AudioBufferRecorder, FreeSoundSearch, FreesoundAudioLoader } from 'treslib'; 
+import './osc.js';
+import audioCtx from './osc.js';
 
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
@@ -21,13 +22,6 @@ let cubos = [];
 let avgFrequency, avgCount = 0;
 
 let label, label2, label3;
-
-const socket = new WebSocket('ws://localhost:8080');
-
-socket.onmessage = (event) => {
-  const oscMsg = JSON.parse(event.data);
-  console.log('Mensaje OSC recibido en la web:', oscMsg);
-};
 
 const hydra = new Hydra({
     canvas: document.getElementById("myCanvas"),
@@ -89,7 +83,7 @@ function init() {
 
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            //const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioCtx.createMediaStreamSource(stream);
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 4096; // Tamaño de FFT
