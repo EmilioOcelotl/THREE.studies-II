@@ -58,8 +58,9 @@ function init() {
 
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.5, // Tamaño de las partículas
-        sizeAttenuation: true
+        size: 0.4, // Tamaño de las partículas
+        sizeAttenuation: true,
+        transparent: true, 
     });
 
     const positionAttribute = geometry.attributes.position;
@@ -155,18 +156,24 @@ function init() {
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         1, // Intensidad del bloom
         0.2, // Radio
-        0.25 // Umbral
+        0.2 // Umbral
     );
 
     composer.addPass(bloomPass);
 
-    osc(15, 0.1, 0)
-        .kaleid(70)
-        .color(0.5102, 0.5102, 1)
-        .rotate(0, 0.1)
-        .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
-        .scale(1.01)
-        .out(o0)
+    osc(() => (avgFrequency / 0.5), 0.1, 0)
+    .kaleid(7)
+    .color(0.5102, 0.5102, 1)
+    .rotate(0, 0.1)
+    .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
+    .modulate(noise(() => (avgFrequency / 30) * 2, 0.01))
+    .scale(1.1)
+    .blend(
+        osc(() => (avgFrequency > 0 ? 1 : 0.1), 0.1, 0) 
+            .color(0, 0, 0) 
+            .scale(1)
+    )
+    .out(o0);
 
     createCubes();
 
@@ -218,8 +225,6 @@ function createCubes() {
     const ysize = 500 / ygrid;
     let materials = [];
 
-
-
     let cubeCount = 0;
     let radius = 400; // Radio de la esfera
     const totalCubes = xgrid * ygrid; // Número total de cubos
@@ -246,8 +251,10 @@ function createCubes() {
 
             cubos[cubeCount].position.set(x, y, z);
 
-            cubos[cubeCount].scale.x = Math.random() * 8 + 5;
-            cubos[cubeCount].scale.y = Math.random() * 8 + 5;
+            let rand = Math.random() * 6+3; 
+
+            cubos[cubeCount].scale.x = rand;
+            cubos[cubeCount].scale.y = rand;
 
             cubos[cubeCount].lookAt(0, 0, 0);
 
@@ -343,7 +350,7 @@ function animate() {
     positionAttribute.needsUpdate = true;
 
     // Escalar la esfera según la intensidad promedio del sonido
-    points.scale.set(scaleMultiplier * 7, scaleMultiplier * 7, scaleMultiplier * 7);
+    points.scale.set(scaleMultiplier * 8, scaleMultiplier * 8, scaleMultiplier * 8);
 
     //rectGroup.rotation.x += 0.0009;
     //rectGroup.rotation.y -= 0.0016;
@@ -377,15 +384,15 @@ function animate() {
     const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
     ring3.quaternion.copy(quaternion3);
 
-    const amplitudeX = 100; // Amplitud mayor en X
-    const amplitudeY = 20;  // Amplitud menor en Y
-    const amplitudeZ = 100;  // Amplitud media en Z
+    const amplitudeX = 150; // Amplitud mayor en X
+    const amplitudeY = 50;  // Amplitud menor en Y
+    const amplitudeZ = 150;  // Amplitud media en Z
 
     const frequency = 0.125; // Frecuencia baja para movimientos suaves
 
-    camera.position.x = amplitudeX * Math.sin(time * frequency);
-    camera.position.y = amplitudeY * Math.sin(time * frequency * 0.5); // Movimiento más lento en Y
-    camera.position.z = amplitudeZ * Math.cos(time * frequency);
+    camera.position.x = amplitudeX * Math.sin((avgCount/1000) * frequency);
+    camera.position.y = amplitudeY * Math.sin((avgCount/1000) * frequency * 0.5); // Movimiento más lento en Y
+    camera.position.z = amplitudeZ * Math.cos((avgCount/1000) * frequency);
 
     camera.lookAt(ring.position);
     vit.needsUpdate = true;
@@ -399,14 +406,14 @@ function animate() {
     label3.position.copy(ring3.position);
     label3.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring3.position.x.toFixed(2)} y: ${ring3.position.y.toFixed(2)} z: ${ring3.position.z.toFixed(2)}<br><br><br><br><br><br>`;
 
-    labelRenderer.render(scene, camera);
-
     render();
+
     composer.render();
+    labelRenderer.render(scene, camera);
 
 }
 
 function render() {
     renderer.render(scene, camera);
-    labelRenderer.render(scene, camera);
+    // labelRenderer.render(scene, camera);
 }

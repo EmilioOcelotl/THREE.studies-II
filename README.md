@@ -1,3 +1,5 @@
 # THREE.studies II 
 
-Sonido, visuales y luces en el navegador. 
+Sonido, gráficos y luces en el navegador. 
+
+

@@ -15,7 +15,7 @@ let g2buffer = 0, g3buffer = 0;
 
 socket.onmessage = (event) => {
   const oscMsg = JSON.parse(event.data);
-  console.log('Mensaje OSC recibido en la web:', oscMsg);
+  // console.log('Mensaje OSC recibido en la web:', oscMsg);
 
   if(oscMsg.address == "/rec" && oscMsg.numarg[0] == 1){
     navigator.mediaDevices.getUserMedia({ audio: true })
