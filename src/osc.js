@@ -9,9 +9,9 @@ const audioloader = new FreeSoundAudioLoader(apiKey)
 
 const socket = new WebSocket(`ws://127.0.0.1:8080`);
 
-let rec, rectime, g1 = new Grain(audioCtx), g2 = new Grain(audioCtx), g3 = new Grain(audioCtx); 
+let rec, rectime, rec2, rectime2, g1 = new Grain(audioCtx), g2 = new Grain(audioCtx);  
 
-let g2buffer = 0, g3buffer = 0;
+// let g2buffer = 0, g3buffer = 0;
 
 socket.onmessage = (event) => {
   const oscMsg = JSON.parse(event.data);
@@ -21,7 +21,7 @@ socket.onmessage = (event) => {
   // G1
   /////////////////////////////////////////////////////////////////////
 
-  if(oscMsg.address == "rectime"){
+  if(oscMsg.address == "/rectime"){
     rectime = oscMsg.numarg[0]; 
   }
 
@@ -30,7 +30,7 @@ socket.onmessage = (event) => {
     .then(stream => {
         const source = audioCtx.createMediaStreamSource(stream);
         console.log("Inicia grabación")
-        rec = new AudioBufferRecorder(audioCtx, source, 5)
+        rec = new AudioBufferRecorder(audioCtx, source, rectime)
         rec.startRecording();
     })
     .catch(err => {
@@ -71,37 +71,42 @@ socket.onmessage = (event) => {
     console.log("cambio ganancia de g1")
   }
 
-  /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////
   // G2
   /////////////////////////////////////////////////////////////////////
 
-  if(oscMsg.address == "/g2search"){
-    async function realizarBusqueda() {
-        const resultados = await freesound.buscar(oscMsg.numarg[0]);
-        return resultados; 
-        // luego una función que con los resultados busque un archivo en concreto y lo descargue
-    }
+  if(oscMsg.address == "/rectime2"){
+    rectime2 = oscMsg.numarg[0]; 
+  }
 
-    realizarBusqueda()
-    .then(resultados => {
-        let res = resultados.resultados[Math.floor(Math.random() * resultados.resultados.length)];
-        console.log(res)
-        let srchURL = 'https://freesound.org/apiv2/sounds/' + res.id; 
-        console.log("liga:" + srchURL);  
-        audioloader.loadAudio(srchURL)
-        .then(buffer => {
-            g2buffer = buffer; 
-            g2.set(buffer, 0, 0.5, 0.1, 0.1, 0.1)
-            //grain.load(buffer); 
-            g2.start(); 
-            console.log("muestra cargada")
-        })   
+  if(oscMsg.address == "/rec2" && oscMsg.numarg[0] == 1){
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+        const source = audioCtx.createMediaStreamSource(stream);
+        console.log("Inicia grabación 2")
+        rec2 = new AudioBufferRecorder(audioCtx, source, rectime2); 
+        rec2.startRecording();
     })
-    console.log("buscando g2")
+    .catch(err => {
+        console.log('Error al acceder al mic: ', err);
+    });
+  }
+
+  if(oscMsg.address == "/rec2" && oscMsg.numarg[0] == 0){
+    rec2.stopRecording();
+    console.log("termina grabación")
+  }
+
+  if(oscMsg.address == "/test2"){
+    let audioSource = audioCtx.createBufferSource();
+    audioSource.buffer = rec2.getRecordedBuffer();
+    audioSource.connect(audioCtx.destination); 
+    audioSource.start(0);
+    console.log("prueba")
   }
 
   if(oscMsg.address == "/g2set"){
-    g2.set(g2buffer, oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
+    g2.set(rec2.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
     console.log("g2 set")
   }
 
@@ -119,57 +124,7 @@ socket.onmessage = (event) => {
     g2.gain = oscMsg.numarg[0]; 
     console.log("cambio ganancia de g2")
   }
-
-  /////////////////////////////////////////////////////////////////////
-  // G3
-  /////////////////////////////////////////////////////////////////////
-
-  if(oscMsg.address == "/g3search"){
-    console.log("hola")
-    async function realizarBusqueda() {
-        const resultados = await freesound.buscar(oscMsg.numarg[0]);
-        return resultados; 
-        // luego una función que con los resultados busque un archivo en concreto y lo descargue
-    }
-
-    realizarBusqueda()
-    .then(resultados => {
-        let res = resultados.resultados[Math.floor(Math.random() * resultados.resultados.length)];
-        console.log(res)
-        let srchURL = 'https://freesound.org/apiv2/sounds/' + res.id; 
-        console.log("liga:" + srchURL);  
-        audioloader.loadAudio(srchURL)
-        .then(buffer => {
-            g3buffer = buffer; 
-            g3.set(buffer, 0, 0.5, 0.1, 0.1, 0.1)
-            //grain.load(buffer); 
-            g3.start(); 
-            console.log("muestra cargada")
-        })   
-    })
-    console.log("buscando g3")
-  }
-
-  if(oscMsg.address == "/g3set"){
-    g3.set(g3buffer, oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
-    console.log("g3 set")
-  }
-
-  if(oscMsg.address == "/g3start"){ 
-    g3.start(); 
-    console.log("inicia g3")
-  }
-
-  if(oscMsg.address == "/g3stop"){
-    g3.stop();
-    console.log("termina g3")
-  }
-
-  if(oscMsg.address == "/g3gain"){
-    g3.gain = oscMsg.numarg[0]; 
-    console.log("cambio ganancia de g3")
-  }
-
+ 
 };
 
 function closeSocket() {
