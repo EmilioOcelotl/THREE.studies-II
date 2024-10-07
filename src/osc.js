@@ -9,13 +9,21 @@ const audioloader = new FreeSoundAudioLoader(apiKey)
 
 const socket = new WebSocket(`ws://127.0.0.1:8080`);
 
-let rec, g1 = new Grain(audioCtx), g2 = new Grain(audioCtx), g3 = new Grain(audioCtx); 
+let rec, rectime, g1 = new Grain(audioCtx), g2 = new Grain(audioCtx), g3 = new Grain(audioCtx); 
 
 let g2buffer = 0, g3buffer = 0;
 
 socket.onmessage = (event) => {
   const oscMsg = JSON.parse(event.data);
   // console.log('Mensaje OSC recibido en la web:', oscMsg);
+
+  /////////////////////////////////////////////////////////////////////
+  // G1
+  /////////////////////////////////////////////////////////////////////
+
+  if(oscMsg.address == "rectime"){
+    rectime = oscMsg.numarg[0]; 
+  }
 
   if(oscMsg.address == "/rec" && oscMsg.numarg[0] == 1){
     navigator.mediaDevices.getUserMedia({ audio: true })
@@ -63,6 +71,10 @@ socket.onmessage = (event) => {
     console.log("cambio ganancia de g1")
   }
 
+  /////////////////////////////////////////////////////////////////////
+  // G2
+  /////////////////////////////////////////////////////////////////////
+
   if(oscMsg.address == "/g2search"){
     async function realizarBusqueda() {
         const resultados = await freesound.buscar(oscMsg.numarg[0]);
@@ -107,6 +119,10 @@ socket.onmessage = (event) => {
     g2.gain = oscMsg.numarg[0]; 
     console.log("cambio ganancia de g2")
   }
+
+  /////////////////////////////////////////////////////////////////////
+  // G3
+  /////////////////////////////////////////////////////////////////////
 
   if(oscMsg.address == "/g3search"){
     console.log("hola")

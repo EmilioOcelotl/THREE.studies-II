@@ -17,7 +17,7 @@ let data = [];
 let ring, ring2, ring3, curve, curve2, curve3;
 let composer;
 
-let cubos = [];
+let cubos = [], bamboo = [];
 
 let avgFrequency, avgCount = 0;
 
@@ -60,7 +60,7 @@ function init() {
         color: 0xffffff,
         size: 0.4, // Tamaño de las partículas
         sizeAttenuation: true,
-        transparent: true, 
+        transparent: true,
     });
 
     const positionAttribute = geometry.attributes.position;
@@ -81,6 +81,35 @@ function init() {
     rectGroup = new THREE.Group(); // Grupo para contener los rectángulos
     createFloatingRectangles(10); // Puedes ajustar el número de rectángulos
     scene.add(rectGroup);
+
+    const numBamboos = 10; // Cambia para ajustar el número de bamboos
+    const radius = 200; // Cambia para ajustar el radio de la circunferencia
+    const bambooHeight = 2000; // Altura de cada bamboo
+    const bambooWidth = 2; // Ancho de cada bamboo
+
+    const bambooMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    for (let i = 0; i < numBamboos; i++) {
+        // Calcula la posición de cada bamboo
+        const angle = (i / numBamboos) * Math.PI * 2;
+        const x = radius * Math.cos(angle);
+        const z = radius * Math.sin(angle);
+
+        // Crear geometría del bamboo
+        const geometry = new THREE.BoxGeometry(bambooWidth, bambooHeight, bambooWidth);
+        const bamboo = new THREE.Mesh(geometry, bambooMaterial);
+
+        // Coloca y rota el bamboo
+        bamboo.position.set(x, 0, z); // Ajusta la altura para que toque el suelo
+        bamboo.lookAt(0, 0, 0); // Hace que cada bamboo mire hacia el centro
+
+    // Genera una inclinación aleatoria para el bamboo
+    const tiltAngle = (Math.random() - 0.5) * Math.PI / 4; // Cambia este valor para ajustar el rango de inclinación
+    bamboo.rotation.x = tiltAngle; // Rota en el eje X
+
+        // Añade el bamboo a la escena
+        scene.add(bamboo);
+    }
 
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
@@ -105,6 +134,9 @@ function init() {
         new THREE.Vector3(100, 0, 100),
         new THREE.Vector3(50, 50, -10),
         new THREE.Vector3(-100, -150, -100),
+        new THREE.Vector3(100, -50, 100)
+        new THREE.Vector3(-150, 50, 0)
+
 
     ];
 
@@ -155,25 +187,25 @@ function init() {
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         1, // Intensidad del bloom
-        0.2, // Radio
+        0.1, // Radio
         0.2 // Umbral
     );
 
     composer.addPass(bloomPass);
 
     osc(() => (avgFrequency / 0.5), 0.1, 0)
-    .kaleid(7)
-    .color(0.5102, 0.5102, 1)
-    .rotate(0, 0.1)
-    .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
-    .modulate(noise(() => (avgFrequency / 30) * 2, 0.01))
-    .scale(1.1)
-    .blend(
-        osc(() => (avgFrequency > 0 ? 1 : 0.1), 0.1, 0) 
-            .color(0, 0, 0) 
-            .scale(1)
-    )
-    .out(o0);
+        .kaleid(7)
+        .color(0.5102, 0.5102, 1)
+        .rotate(0, 0.1)
+        .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
+        .modulate(noise(() => (avgFrequency / 30) * 2, 0.01))
+        .scale(1.01)
+        .blend(
+            osc(() => (avgFrequency > 0 ? 1 : 0.1), 0.1, 0)
+                .color(0, 0, 0)
+                .scale(1)
+        )
+        .out(o0);
 
     createCubes();
 
@@ -251,7 +283,7 @@ function createCubes() {
 
             cubos[cubeCount].position.set(x, y, z);
 
-            let rand = Math.random() * 6+3; 
+            let rand = Math.random() * 6 + 3;
 
             cubos[cubeCount].scale.x = rand;
             cubos[cubeCount].scale.y = rand;
@@ -276,8 +308,8 @@ function change_uvs(geometry, unitx, unity, offsetx, offsety) {
 }
 
 function createFloatingRectangles(num) {
-    const radius = 100; 
-    const phi = (1 + Math.sqrt(5)) / 2; 
+    const radius = 100;
+    const phi = (1 + Math.sqrt(5)) / 2;
 
     for (let i = 0; i < num; i++) {
         const width = Math.random() * 40 + 25;
@@ -313,7 +345,7 @@ function animate() {
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
-    const time = performance.now() * 0.0005;
+    // const time = performance.now() * 0.0005;
 
     const noiseStrength = 0.4;  // Ajustamos la fuerza de la oscilación
     const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
@@ -335,9 +367,9 @@ function animate() {
         const audioOffset = Math.pow(freqValue, 1) * freqStrength;
 
         // Aplicamos oscilaciones sinusoidales
-        const sineOffset = Math.sin(origX * 0.3 + (avgCount/1000)) * noiseStrength +
-            Math.cos(origY * 0.3 + + (avgCount/1000)) * noiseStrength +
-            Math.sin(origZ * 0.3 + + (avgCount/1000)) * noiseStrength;
+        const sineOffset = Math.sin(origX * 0.3 + (avgCount / 1000)) * noiseStrength +
+            Math.cos(origY * 0.3 +  (avgCount / 1000)) * noiseStrength +
+            Math.sin(origZ * 0.3 +  (avgCount / 1000)) * noiseStrength;
 
         const totalOffset = sineOffset + audioOffset;
 
@@ -355,7 +387,7 @@ function animate() {
     //rectGroup.rotation.x += 0.0009;
     //rectGroup.rotation.y -= 0.0016;
 
-    const stime = ((avgCount * 0.5) % 5000) / 5000;  // tiempo para mover el anillo
+    const stime = ((avgCount * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
 
     const point = curve.getPointAt(stime);     // obtener el punto en la curva
     const tangent = curve.getTangentAt(stime); // obtener la dirección en el punto
@@ -384,15 +416,15 @@ function animate() {
     const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
     ring3.quaternion.copy(quaternion3);
 
-    const amplitudeX = 150; // Amplitud mayor en X
-    const amplitudeY = 50;  // Amplitud menor en Y
-    const amplitudeZ = 150;  // Amplitud media en Z
+    const amplitudeX = 50; // Amplitud mayor en X
+    const amplitudeY = 25;  // Amplitud menor en Y
+    const amplitudeZ = 50;  // Amplitud media en Z
 
-    const frequency = 0.125; // Frecuencia baja para movimientos suaves
+    const frequency = 0.5; // Frecuencia baja para movimientos suaves
 
-    camera.position.x = amplitudeX * Math.sin((avgCount/1000) * frequency);
-    camera.position.y = amplitudeY * Math.sin((avgCount/1000) * frequency * 0.5); // Movimiento más lento en Y
-    camera.position.z = amplitudeZ * Math.cos((avgCount/1000) * frequency);
+    camera.position.x = amplitudeX * Math.sin((avgCount / 1000) * frequency);
+    camera.position.y = amplitudeY * Math.sin((avgCount / 1000) * frequency * 0.5); // Movimiento más lento en Y
+    camera.position.z = amplitudeZ * Math.cos((avgCount / 1000) * frequency);
 
     camera.lookAt(ring.position);
     vit.needsUpdate = true;
