@@ -134,10 +134,8 @@ function init() {
         new THREE.Vector3(100, 0, 100),
         new THREE.Vector3(50, 50, -10),
         new THREE.Vector3(-100, -150, -100),
-        new THREE.Vector3(100, -50, 100)
+        new THREE.Vector3(100, -50, 100),
         new THREE.Vector3(-150, 50, 0)
-
-
     ];
 
     curve = new THREE.CatmullRomCurve3(pointsCurve, true);
