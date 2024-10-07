@@ -52,7 +52,7 @@ socket.onmessage = (event) => {
   }
 
   if(oscMsg.address == "/g1set"){
-    g1.set(rec.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
+    // g1.set(rec.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
     console.log("g1 set")
   }
 
@@ -107,7 +107,7 @@ socket.onmessage = (event) => {
 
   if(oscMsg.address == "/g2set"){
     g2.set(rec2.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
-    console.log("g2 set")
+    //console.log("g2 set")
   }
 
   if(oscMsg.address == "/g2start"){ 

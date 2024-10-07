@@ -9,13 +9,13 @@ s.meter;
 ////////////////////////////////////////////////////////////////////////////
 
 (
-m.sendMsg("/rectime", 1);
+m.sendMsg("/rectime", 6);
 m.sendMsg("/rec", 1);
 )
 
 (
 m.sendMsg("/rec", 0);
-m.sendMsg("/g1set", 0.2, 1, 0.25, 0.1, 0.1);
+m.sendMsg("/g1set", 0.1, 1, 0.25, 0.1, 0.1);
 m.sendMsg("/g1start");
 )
 
@@ -43,7 +43,7 @@ OSCdef(\g1, {|msg|
 		'/g1setDef',
 		[
 			Demand.kr(Onsets.kr(FFT(LocalBuf(512), SoundIn.ar(0)), 0.1), 0, Drand(Array.rand(20, 0.01, 1.0), inf)), // pointer
-			Lag.kr(Demand.kr(Onsets.kr(FFT(LocalBuf(512), SoundIn.ar(0)), 0.1), 0, Drand(Array.rand(20, 0.2, 2.0), inf)), 1),  // freqScale
+			Demand.kr(Onsets.kr(FFT(LocalBuf(512), SoundIn.ar(0)), 0.1), 0, Drand(Array.rand(20, -2.0, 2.0), inf)),  // freqScale
 			0.8, // windowSize
 			Lag.kr(Demand.kr(Onsets.kr(FFT(LocalBuf(512), SoundIn.ar(0)), 0.1), 0, Drand(Array.rand(20, 0.2, 0.5), inf)), 1), // overlaps
 			Lag.kr(Demand.kr(Onsets.kr(FFT(LocalBuf(512), SoundIn.ar(0)), 0.1), 0, Drand(Array.rand(20, 0.0, 0.5), inf)), 1)  // windowRandRatio
@@ -104,5 +104,4 @@ OSCdef(\g2, {|msg|
 )
 
 
-OSCdef(\g2).free;
-
+OSCdef(\g2).free;d
