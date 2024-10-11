@@ -1,5 +1,6 @@
 import { GLoop, Grain, AudioBufferRecorder, FreeSoundSearcher, FreeSoundAudioLoader } from 'treslib'; 
 import { url, apiKey } from './config.js';
+import { showCredits } from './index.js';
 
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 export default audioCtx;
@@ -123,6 +124,12 @@ socket.onmessage = (event) => {
   if(oscMsg.address == "/g2gain"){
     g2.gain = oscMsg.numarg[0]; 
     console.log("cambio ganancia de g2")
+  }
+
+  if(oscMsg.address == "/end"){
+    showCredits(); 
+    const startButton = document.getElementById('startButton');
+    startButton.remove();
   }
  
 };

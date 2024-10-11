@@ -104,4 +104,4 @@ OSCdef(\g2, {|msg|
 )
 
 
-OSCdef(\g2).free;d
+OSCdef(\g2).free;

@@ -21,7 +21,7 @@ m.sendMsg("/g2search", "rusty old");
 // g2 set
 m.sendMsg("/g2set", 0.2, 1, 0.25, 0.1, 0.1);
 // volumen g2
-m.sendMsg("/g2gain", 0.5)
+m.sendMsg("/g2gain", 0.125)
 // iniciar g2
 m.sendMsg("/g2start");
 // detener g2
@@ -35,4 +35,6 @@ m.sendMsg("/g3gain", 0.5)
 // iniciar g3
 m.sendMsg("/g3start");
 // detener g3
-m.sendMsg("/g3stop"); 
+m.sendMsg("/g3stop");
+// final
+m.sendMsg("/end");

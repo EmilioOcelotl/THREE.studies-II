@@ -14,13 +14,15 @@ body {
 
 .label {
     pointer-events: none; 
+    font-size: 40px; 
+
 }
 
 #startButton {
     background-color: #000; 
     color: #8282ff; 
     font-family: "Silkscreen", sans-serif; 
-    font-size: 24px; 
+    font-size: 40px; 
     border: 2px solid #8282ff; 
     padding: 10px 20px; 
     border-radius: 5px; 
@@ -39,5 +41,5 @@ body {
     margin-bottom: 20px; 
     color: #8282ff; 
     font-family: "Silkscreen", sans-serif; 
-    font-size: 24px; 
+    font-size: 40px; 
 }

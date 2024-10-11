@@ -8,6 +8,7 @@ import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
 import audioCtx from './osc.js';
+import spriteImage from '../static/img/trace_01.png';
 
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
@@ -47,7 +48,7 @@ function init() {
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    scene.background = new THREE.Color(0x000000);
+    // scene.background = vit;
     //composer.render();
 
     const ambient = new THREE.HemisphereLight(0xffffff, 1);
@@ -56,12 +57,18 @@ function init() {
     // Crear una geometría de esfera y un material de puntos
     const geometry = new THREE.SphereGeometry(15, 64, 64); // Aumenta el detalle de la esfera
 
+    const loader = new THREE.TextureLoader();
+    const spriteTexture = loader.load(spriteImage);
+
+    
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.4, // Tamaño de las partículas
-        sizeAttenuation: true,
-        transparent: true,
-    });
+        size: 1.0, // Tamaño de cada partícula
+        // map: spriteTexture,
+        transparent: true, // Para manejar la transparencia del sprite
+        alphaTest: 0.5, // Ajusta para evitar el renderizado de pixeles transparentes
+        //blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
+      });
 
     const positionAttribute = geometry.attributes.position;
     originalPosition = Float32Array.from(positionAttribute.array); // Guardamos las posiciones originales
@@ -83,9 +90,9 @@ function init() {
     scene.add(rectGroup);
 
     const numBamboos = 10; // Cambia para ajustar el número de bamboos
-    const radius = 200; // Cambia para ajustar el radio de la circunferencia
+    const radius = 100; // Cambia para ajustar el radio de la circunferencia
     const bambooHeight = 2000; // Altura de cada bamboo
-    const bambooWidth = 2; // Ancho de cada bamboo
+    const bambooWidth = 0.5; // Ancho de cada bamboo
 
     const bambooMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
@@ -104,7 +111,7 @@ function init() {
         bamboo.lookAt(0, 0, 0); // Hace que cada bamboo mire hacia el centro
 
     // Genera una inclinación aleatoria para el bamboo
-    const tiltAngle = (Math.random() - 0.5) * Math.PI / 4; // Cambia este valor para ajustar el rango de inclinación
+    const tiltAngle = (Math.random() - 0.5) * Math.PI / 1.5; // Cambia este valor para ajustar el rango de inclinación
     bamboo.rotation.x = tiltAngle; // Rota en el eje X
 
         // Añade el bamboo a la escena
@@ -184,16 +191,16 @@ function init() {
 
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1, // Intensidad del bloom
-        0.1, // Radio
-        0.2 // Umbral
+        0.5, // Intensidad del bloom
+        0.2, // Radio
+        0.3 // Umbral
     );
 
     composer.addPass(bloomPass);
 
-    osc(() => (avgFrequency / 0.5), 0.1, 0)
+    osc(() => (avgFrequency / 0.5), 0.7, 0.5)
         .kaleid(7)
-        .color(0.5102, 0.5102, 1)
+        .color(1, 1, 1)
         .rotate(0, 0.1)
         .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
         .modulate(noise(() => (avgFrequency / 30) * 2, 0.01))
@@ -256,7 +263,7 @@ function createCubes() {
     let materials = [];
 
     let cubeCount = 0;
-    let radius = 400; // Radio de la esfera
+    let radius = 200; // Radio de la esfera
     const totalCubes = xgrid * ygrid; // Número total de cubos
     const phi = (1 + Math.sqrt(5)) / 2; // Proporción áurea
 
@@ -281,10 +288,11 @@ function createCubes() {
 
             cubos[cubeCount].position.set(x, y, z);
 
-            let rand = Math.random() * 6 + 3;
+            let rand1 = Math.random() * 3 + 1;
+            let rand2 = Math.random() * 3 + 1;
 
-            cubos[cubeCount].scale.x = rand;
-            cubos[cubeCount].scale.y = rand;
+            cubos[cubeCount].scale.x = rand1;
+            cubos[cubeCount].scale.y = rand2;
 
             cubos[cubeCount].lookAt(0, 0, 0);
 
@@ -315,7 +323,7 @@ function createFloatingRectangles(num) {
 
         const rectGeometry = new THREE.PlaneGeometry(width, height);
         const edges = new THREE.EdgesGeometry(rectGeometry);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 4 });
         const wireframe = new THREE.LineSegments(edges, lineMaterial);
 
         const theta = 2 * Math.PI * i / phi; // Ángulo azimutal
@@ -414,9 +422,9 @@ function animate() {
     const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
     ring3.quaternion.copy(quaternion3);
 
-    const amplitudeX = 50; // Amplitud mayor en X
+    const amplitudeX = 200; // Amplitud mayor en X
     const amplitudeY = 25;  // Amplitud menor en Y
-    const amplitudeZ = 50;  // Amplitud media en Z
+    const amplitudeZ = 200;  // Amplitud media en Z
 
     const frequency = 0.5; // Frecuencia baja para movimientos suaves
 
@@ -446,4 +454,20 @@ function animate() {
 function render() {
     renderer.render(scene, camera);
     // labelRenderer.render(scene, camera);
+}
+
+export function showCredits() {
+    // Elimina el canvas de Three.js
+    const container = document.getElementById('container');
+    container.remove();
+
+
+    const credits = document.createElement('div');
+    credits.id = 'credits';
+    credits.innerHTML = 'THREE.studies<br><br>para eCello de 5 cuerdas, livercoder y navegador<br> Iracema de Andrade y Emilio Ocelotl';
+    credits.style.display = 'block';
+    
+    // Agregarlo al DOM
+    document.body.appendChild(credits);
+
 }
