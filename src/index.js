@@ -58,12 +58,10 @@ function init() {
     const geometry = new THREE.SphereGeometry(15, 64, 64); // Aumenta el detalle de la esfera
 
     const loader = new THREE.TextureLoader();
-    const spriteTexture = loader.load(spriteImage);
-
     
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 1.0, // Tamaño de cada partícula
+        size: 0.5, // Tamaño de cada partícula
         // map: spriteTexture,
         transparent: true, // Para manejar la transparencia del sprite
         alphaTest: 0.5, // Ajusta para evitar el renderizado de pixeles transparentes
@@ -82,6 +80,9 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+    // renderer.toneMapping = THREE.ReinhardToneMapping;
+
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
@@ -89,7 +90,7 @@ function init() {
     createFloatingRectangles(10); // Puedes ajustar el número de rectángulos
     scene.add(rectGroup);
 
-    const numBamboos = 10; // Cambia para ajustar el número de bamboos
+    const numBamboos = 15; // Cambia para ajustar el número de bamboos
     const radius = 100; // Cambia para ajustar el radio de la circunferencia
     const bambooHeight = 2000; // Altura de cada bamboo
     const bambooWidth = 0.5; // Ancho de cada bamboo
@@ -149,7 +150,7 @@ function init() {
 
     // Generar la geometría de tubo
     const geometryTube = new THREE.TubeGeometry(curve, 400, 0.25, 8, false);
-    const materialTube = new THREE.MeshBasicMaterial({ color: 0x8282ff, wireframe: false });
+    const materialTube = new THREE.MeshBasicMaterial({ color: 0xb2b2ff, wireframe: false });
     const tube = new THREE.Mesh(geometryTube, materialTube);
     scene.add(tube);
 
@@ -157,7 +158,7 @@ function init() {
     const complementPoints1 = pointsCurve.map(point => new THREE.Vector3(point.x, -point.y, point.z));
     curve2 = new THREE.CatmullRomCurve3(complementPoints1, true);
     const geometryTubeComplement1 = new THREE.TubeGeometry(curve2, 400, 0.25, 8, false);
-    const materialTubeComplement1 = new THREE.MeshBasicMaterial({ color: 0xff82ff, wireframe: false }); // Color complementario
+    const materialTubeComplement1 = new THREE.MeshBasicMaterial({ color: 0xffb2ff, wireframe: false }); // Color complementario
     const tubeComplement1 = new THREE.Mesh(geometryTubeComplement1, materialTubeComplement1);
     scene.add(tubeComplement1);
 
@@ -165,22 +166,22 @@ function init() {
     const complementPoints2 = pointsCurve.map(point => new THREE.Vector3(point.x, point.y, -point.z));
     curve3 = new THREE.CatmullRomCurve3(complementPoints2, true);
     const geometryTubeComplement2 = new THREE.TubeGeometry(curve3, 400, 0.25, 8, false);
-    const materialTubeComplement2 = new THREE.MeshBasicMaterial({ color: 0x82ff82, wireframe: false }); // Otro color complementario
+    const materialTubeComplement2 = new THREE.MeshBasicMaterial({ color: 0xb2ffb2, wireframe: false }); // Otro color complementario
     const tubeComplement2 = new THREE.Mesh(geometryTubeComplement2, materialTubeComplement2);
     scene.add(tubeComplement2);
 
     const cylinderGeometry = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0x8282ff });
+    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0xb2b2ff });
     ring = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
     scene.add(ring);
 
     const cylinderGeometry2 = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial2 = new THREE.MeshBasicMaterial({ color: 0xff82ff });
+    const cylinderMaterial2 = new THREE.MeshBasicMaterial({ color: 0xffb2ff });
     ring2 = new THREE.Mesh(cylinderGeometry2, cylinderMaterial2);
     scene.add(ring2);
 
     const cylinderGeometry3 = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial3 = new THREE.MeshBasicMaterial({ color: 0x82ff82 });
+    const cylinderMaterial3 = new THREE.MeshBasicMaterial({ color: 0xb2ffb2 });
     ring3 = new THREE.Mesh(cylinderGeometry3, cylinderMaterial3);
     scene.add(ring3);
 
@@ -191,8 +192,8 @@ function init() {
 
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.5, // Intensidad del bloom
-        0.2, // Radio
+        1, // Intensidad del bloom
+        0.4, // Radio
         0.3 // Umbral
     );
 
@@ -204,7 +205,7 @@ function init() {
         .rotate(0, 0.1)
         .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
         .modulate(noise(() => (avgFrequency / 30) * 2, 0.01))
-        .scale(1.01)
+        .scale(1.1)
         .blend(
             osc(() => (avgFrequency > 0 ? 1 : 0.1), 0.1, 0)
                 .color(0, 0, 0)
@@ -227,7 +228,7 @@ function init() {
     labeltext.style.padding = '10px';
     labeltext.style.borderRadius = '10px';
     labeltext.style.margin = '25px'; // Ajusta el margen según sea necesario
-    labeltext.style.color = 'rgb(130, 130, 255)'; // Cambia a azul oscuro
+    labeltext.style.color = 'rgb(178, 178, 255)'; // Cambia a azul oscuro
     label = new CSS2DObject(labeltext);
     scene.add(label);
 
@@ -238,7 +239,7 @@ function init() {
     labeltext2.style.padding = '10px';
     labeltext2.style.borderRadius = '10px';
     labeltext2.style.margin = '25px'; // Ajusta el margen según sea necesario
-    labeltext2.style.color = 'rgb(255, 130, 255)'; // Cambia a azul oscuro
+    labeltext2.style.color = 'rgb(255, 178, 255)'; // Cambia a azul oscuro
     label2 = new CSS2DObject(labeltext2);
     scene.add(label2);
 
@@ -249,7 +250,7 @@ function init() {
     labeltext3.style.padding = '10px';
     labeltext3.style.borderRadius = '10px';
     labeltext3.style.margin = '25px'; // Ajusta el margen según sea necesario
-    labeltext3.style.color = 'rgb(130, 255, 130)'; // Cambia a azul oscuro
+    labeltext3.style.color = 'rgb(178, 255, 178)'; // Cambia a azul oscuro
     label3 = new CSS2DObject(labeltext3);
     scene.add(label3);
 }
@@ -314,12 +315,12 @@ function change_uvs(geometry, unitx, unity, offsetx, offsety) {
 }
 
 function createFloatingRectangles(num) {
-    const radius = 100;
+    const radius = 150;
     const phi = (1 + Math.sqrt(5)) / 2;
 
     for (let i = 0; i < num; i++) {
-        const width = Math.random() * 40 + 25;
-        const height = Math.random() * 40 + 25;
+        const width = Math.random() * 80 + 25;
+        const height = Math.random() * 80 + 25;
 
         const rectGeometry = new THREE.PlaneGeometry(width, height);
         const edges = new THREE.EdgesGeometry(rectGeometry);
@@ -348,6 +349,7 @@ function animate() {
     avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
 
     avgCount = (avgCount + avgFrequency) * 1;
+
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
@@ -422,9 +424,9 @@ function animate() {
     const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
     ring3.quaternion.copy(quaternion3);
 
-    const amplitudeX = 200; // Amplitud mayor en X
+    const amplitudeX = 1 + (avgCount/1000); // Amplitud mayor en X
     const amplitudeY = 25;  // Amplitud menor en Y
-    const amplitudeZ = 200;  // Amplitud media en Z
+    const amplitudeZ = 1 + (avgCount/1000);  // Amplitud media en Z
 
     const frequency = 0.5; // Frecuencia baja para movimientos suaves
 
