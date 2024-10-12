@@ -9,6 +9,8 @@ import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
 import audioCtx from './osc.js';
 import spriteImage from '../static/img/trace_01.png';
+import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
+import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
@@ -29,6 +31,8 @@ const hydra = new Hydra({
     detectAudio: false,
     //makeGlobal: false
 }) // antes tenía .synth aqui 
+
+let webaudio; 
 
 let elCanvas = document.getElementById("myCanvas");
 vit = new THREE.CanvasTexture(elCanvas);
@@ -253,6 +257,11 @@ function init() {
     labeltext3.style.color = 'rgb(178, 255, 178)'; // Cambia a azul oscuro
     label3 = new CSS2DObject(labeltext3);
     scene.add(label3);
+
+    // MMLL
+
+    webaudio = new MMLLWebAudioSetup(256,2,callback,setup); 
+
 }
 
 function createCubes() {
@@ -473,3 +482,23 @@ export function showCredits() {
     document.body.appendChild(credits);
 
 }
+
+const setup = function SetUp(sampleRate){
+    console.log("webaudio setup!");
+    onsetdetector = new MMLLOnsetDetector(sampleRate); //default threshold 0.34
+    webaudio.audiocontext.close();
+    webaudio.audiocontext = audioCtx;
+
+}
+
+var callback = function CallBack(input,output,n) {
+   
+    var detection = onsetdetector.next( input.monoinput );
+    
+    if(detection) { //aqui antes había un !mute
+	
+        console.log('onsetnow');
+
+    }
+
+};
