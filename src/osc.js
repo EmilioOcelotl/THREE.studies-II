@@ -3,7 +3,6 @@ import { url, apiKey } from './config.js';
 import { showCredits } from './index.js';
 
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-export default audioCtx;
 
 const freesound = new FreeSoundSearcher(apiKey)
 const audioloader = new FreeSoundAudioLoader(apiKey)
@@ -53,7 +52,7 @@ socket.onmessage = (event) => {
   }
 
   if(oscMsg.address == "/g1set"){
-    // g1.set(rec.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]);  
+    g1.set(rec.getRecordedBuffer(), oscMsg.numarg[0], oscMsg.numarg[1], oscMsg.numarg[2], oscMsg.numarg[3], oscMsg.numarg[4]); // ¿Por qué estaba comentado? 
     console.log("g1 set")
   }
 
@@ -142,3 +141,5 @@ function closeSocket() {
 }
 
 window.addEventListener('beforeunload', closeSocket);
+
+export { audioCtx, g1, g2 };

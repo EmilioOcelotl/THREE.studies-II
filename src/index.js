@@ -7,8 +7,8 @@ import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
-import audioCtx from './osc.js';
-import spriteImage from '../static/img/scorch_02.png';
+import  { audioCtx, g1, g2 } from './osc.js';
+
 import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
 import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
@@ -22,7 +22,7 @@ let composer;
 
 let cubos = [], bamboo = [];
 
-let avgFrequency, avgCount = 0;
+let avgFrequency, avgCount = 0, avgCount2 = 0, avgCount3 = 0;
 
 let label, label2, label3;
 
@@ -67,8 +67,8 @@ function init() {
     // Crear una geometría de esfera y un material de puntos
     const geometry = new THREE.SphereGeometry(15, 128, 128); // Aumenta el detalle de la esfera
 
-    const loader = new THREE.TextureLoader();
-    const spriteTexture = loader.load(spriteImage);
+    //const loader = new THREE.TextureLoader();
+    //const spriteTexture = loader.load(spriteImage);
 
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
@@ -361,12 +361,16 @@ function animate() {
 
     analyser.getByteFrequencyData(data);
 
-    // data = analyser.getByte...
+    const avgFrequency2 = g1.getAvgFrequency(); // Asegúrate de que esta función esté definida
+    // console.log("Promedio de frecuencia granulador:", avgFrequency2);
+    avgCount2 = (avgCount2 + avgFrequency2) * 1;
+
+    const avgFrequency3 = g2.getAvgFrequency(); // Asegúrate de que esta función esté definida
+    // console.log("Promedio de frecuencia granulador:", avgFrequency2);
+    avgCount3 = (avgCount3 + avgFrequency3) * 1;
 
     avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
-
     avgCount = (avgCount + avgFrequency) * 1;
-
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
@@ -413,6 +417,8 @@ function animate() {
     //rectGroup.rotation.y -= 0.0016;
 
     const stime = ((avgCount * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
+    const stime2 = ((avgCount2 * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
+    const stime3 = ((avgCount3 * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
 
     const point = curve.getPointAt(stime);     // obtener el punto en la curva
     const tangent = curve.getTangentAt(stime); // obtener la dirección en el punto
@@ -423,8 +429,8 @@ function animate() {
     const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, tangent);
     ring.quaternion.copy(quaternion);
 
-    const point2 = curve2.getPointAt(stime);     // obtener el punto en la curva
-    const tangent2 = curve2.getTangentAt(stime); // obtener la dirección en el punto
+    const point2 = curve2.getPointAt(stime2);     // obtener el punto en la curva
+    const tangent2 = curve2.getTangentAt(stime2); // obtener la dirección en el punto
 
     ring2.position.set(point2.x, point2.y, point2.z);
 
@@ -432,8 +438,8 @@ function animate() {
     const quaternion2 = new THREE.Quaternion().setFromUnitVectors(axis2, tangent2);
     ring2.quaternion.copy(quaternion2);
 
-    const point3 = curve3.getPointAt(stime);     // obtener el punto en la curva
-    const tangent3 = curve3.getTangentAt(stime); // obtener la dirección en el punto
+    const point3 = curve3.getPointAt(stime3);     // obtener el punto en la curva
+    const tangent3 = curve3.getTangentAt(stime3); // obtener la dirección en el punto
 
     ring3.position.set(point3.x, point3.y, point3.z);
 
@@ -514,7 +520,7 @@ var callback = function CallBack(input,output,n) {
             scene.background = new THREE.Color( 0x00000 );
         }
 
-        if(consethydra == 64    ){
+        if(consethydra == 64){
             consethydra = 0; 
             sentido = sentido * -1; 
             hydraSelect(hydraCount)
