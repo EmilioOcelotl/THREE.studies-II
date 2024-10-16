@@ -8,7 +8,7 @@ import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
 import audioCtx from './osc.js';
-import spriteImage from '../static/img/trace_01.png';
+import spriteImage from '../static/img/scorch_02.png';
 import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
 import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
@@ -25,6 +25,12 @@ let cubos = [], bamboo = [];
 let avgFrequency, avgCount = 0;
 
 let label, label2, label3;
+
+let consethydra = 0; 
+
+let sentido = 1; 
+
+let hydraCount = 0; 
 
 const hydra = new Hydra({
     canvas: document.getElementById("myCanvas"),
@@ -59,17 +65,18 @@ function init() {
     scene.add(ambient);
 
     // Crear una geometría de esfera y un material de puntos
-    const geometry = new THREE.SphereGeometry(15, 64, 64); // Aumenta el detalle de la esfera
+    const geometry = new THREE.SphereGeometry(15, 128, 128); // Aumenta el detalle de la esfera
 
     const loader = new THREE.TextureLoader();
-    
+    const spriteTexture = loader.load(spriteImage);
+
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.5, // Tamaño de cada partícula
-        // map: spriteTexture,
-        transparent: true, // Para manejar la transparencia del sprite
-        alphaTest: 0.5, // Ajusta para evitar el renderizado de pixeles transparentes
-        //blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
+        size: 0.4, // Tamaño de cada partícula
+        map: vit,
+        //transparent: true, // Para manejar la transparencia del sprite
+        //alphaTest: 0.5, // Ajusta para evitar el renderizado de pixeles transparentes
+        blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
       });
 
     const positionAttribute = geometry.attributes.position;
@@ -84,8 +91,9 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-    // renderer.toneMapping = THREE.ReinhardToneMapping;
+    //renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+    renderer.toneMapping = THREE.ReinhardToneMapping;
+    renderer.toneMappingExposure = Math.pow( 1, 4.0 );
 
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
@@ -196,14 +204,14 @@ function init() {
 
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1, // Intensidad del bloom
+        0.5, // Intensidad del bloom
         0.4, // Radio
         0.3 // Umbral
     );
 
     composer.addPass(bloomPass);
 
-    osc(() => (avgFrequency / 0.5), 0.7, 0.5)
+    osc(() => (avgFrequency / 1)+0.1, 0.7, 0)
         .kaleid(7)
         .color(1, 1, 1)
         .rotate(0, 0.1)
@@ -298,8 +306,8 @@ function createCubes() {
 
             cubos[cubeCount].position.set(x, y, z);
 
-            let rand1 = Math.random() * 3 + 1;
-            let rand2 = Math.random() * 3 + 1;
+            let rand1 = Math.random() * 4 + 2;
+            let rand2 = Math.random() * 4 + 2;
 
             cubos[cubeCount].scale.x = rand1;
             cubos[cubeCount].scale.y = rand2;
@@ -439,9 +447,9 @@ function animate() {
 
     const frequency = 0.5; // Frecuencia baja para movimientos suaves
 
-    camera.position.x = amplitudeX * Math.sin((avgCount / 1000) * frequency);
+    camera.position.x = amplitudeX * Math.sin((avgCount / 1000* sentido) * frequency) ;
     camera.position.y = amplitudeY * Math.sin((avgCount / 1000) * frequency * 0.5); // Movimiento más lento en Y
-    camera.position.z = amplitudeZ * Math.cos((avgCount / 1000) * frequency);
+    camera.position.z = amplitudeZ * Math.cos((avgCount / 1000 * sentido) * frequency);
 
     camera.lookAt(ring.position);
     vit.needsUpdate = true;
@@ -496,9 +504,164 @@ var callback = function CallBack(input,output,n) {
     var detection = onsetdetector.next( input.monoinput );
     
     if(detection) { //aqui antes había un !mute
-	
-        console.log('onsetnow');
+        // console.log('onsetnow');
+        consethydra++;
+        hydraCount++;
+
+        if(consethydra == 63 || consethydra == 62 || consethydra == 61 || consethydra == 60 ){
+            scene.background = vit;
+        } else {
+            scene.background = new THREE.Color( 0x00000 );
+        }
+
+        if(consethydra == 64    ){
+            consethydra = 0; 
+            sentido = sentido * -1; 
+            hydraSelect(hydraCount)
+            console.log("cambio")
+            // console.log(sentido)
+            
+        }
 
     }
-
 };
+
+function hydraSelect(sketch) {
+    switch (sketch) {
+        case 0:
+            osc(() => (avgFrequency / 1) + 0.1, 0.1, 0) // osci
+                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+                .kaleid(10) // kal
+                .diff(voronoi(1, 1, 0) // voro, vorovel
+                    .color(0, 0, 0)) // negro
+                .rotate(10, 1) // ang, rotvel 
+                .modulateScrollX(o0, () => (avgFrequency / 1) + 0.1) // mod  
+                .scale(1, 1, 1) // scl, sclX, sclY
+                .saturate(0.5) // sat
+                .out(o0);
+            break;
+        case 1:
+            osc(() => (avgFrequency / 1) + 0.1, 0.1, 0) // osci
+                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+                .kaleid(5) // kal
+                .diff(voronoi(2, 1, 0) // voro, vorovel
+                    .color(0, 0, 0)) // negro
+                .rotate(180, 2) // ang, rotvel 
+                .modulate(o0, () => (avgFrequency / 1) + 0.1) // mod  
+                .scale(2, 2, 2) // scl, sclX, sclY
+                .saturate(0.5) // sat
+                .out(o0);
+            break;
+        case 2:
+            osc(() => (avgFrequency / 1) + 0.1, 0.1, 0) // osci
+                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+                .kaleid(5) // kal
+                .diff(voronoi(2, 1, 0) // voro, vorovel
+                    .color(0, 0, 0)) // negro
+                .rotate(10, 2) // ang, rotvel 
+                .modulate(o0, () => (avgFrequency * 0.0003)) // mod  
+                .scale(1, 1, 1) // scl, sclX, sclY
+                .saturate(0.5) // sat
+                .out(o0);
+            break;
+        case 3:
+            osc(20, 0.01, 0) // osci
+                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+                .kaleid(20)
+                .rotate(1, 0.1)
+                .modulate(o0, () => avgFrequency * 0.0003) // mod
+                .scale(0.99)
+                .saturate(0.5) // sat
+                .out(o0);
+            break;
+        case 4:
+            voronoi(8, 1)
+                .mult(osc(10, 0.1, 0) // osci
+                    .color(0.5, 0.5, 0.5)) // gris (mitad de blanco)
+                .modulate(o0, 0.5)
+                .add(o0, 0.8)
+                .scrollY(-0.01)
+                .scale(0.99)
+                .modulate(voronoi(8, 1), 0.008)
+                .luma(() => avgFrequency * 0.0009) // mod
+                .saturate(0.5) // sat
+                .out();
+            break;
+        case 5:
+            voronoi(8, 1)
+                .mult(osc(10, 0.1, 0))
+                .modulate(o0, 0.5)
+                .add(o0, 0.8)
+                .scrollY(-0.01)
+                .scale(0.99)
+                .modulate(voronoi(8, 1), 0.008)
+                .luma(() => avgFrequency * 0.0009) // mod
+                .out();
+            break;
+        case 6:
+            osc(5, 0.9, 0)
+                .kaleid([3, 4, 5, 7, 8, 9, 10].fast(0.1))
+                .rotate(0.009, () => Math.sin(time) * -0.0001)
+                .modulateRotate(o0, () => Math.sin(time) * 0.0003)
+                .modulate(o0, () => avgFrequency * 0.0009) // mod
+                .scale(0.99) // escala estática
+                .out(o0);
+            break;
+        case 7:
+            osc(5)
+                .modulate(noise(6), 0.22).diff(o0)
+                .modulateScrollY(osc(0.8).modulate(osc(10).modulate(osc(2, 0.1), () => avgFrequency * 0.01).rotate(), 0.91))
+                .scale(0.79)
+                .out();
+            break;
+        case 8:
+            osc(105).rotate(0.11, 0.1).modulate(osc(10).rotate(0.3).add(o0, 0.1)).add(osc(20, 0.01, 0)).out(o0);
+            osc(50, 0.005).diff(o0).modulate(o1, () => avgFrequency * 0.00009).out(o1);
+            render(o1);
+            break;
+        case 9:
+            voronoi(350, 0.15)
+                .modulateScale(osc(8).rotate(Math.sin(time)), 0.5)
+                .thresh(0.8)
+                .modulateRotate(osc(7), 0.4)
+                .thresh(0.7)
+                .diff(src(o0).scale(1.8))
+                .modulateScale(osc(2).modulateRotate(o0, 0.74))
+                .diff(src(o0).rotate([-.012, .01, -.002, 0]).scrollY(0, [-1 / 199800, 0].fast(0.7)))
+                .brightness([-.02, -.17].smooth().fast(0.5))
+                .out();
+            break;
+        case 10:
+            shape(20, 0.11, 0.3)
+                .scale(0.9)
+                .repeat(() => Math.sin(time) * 100)
+                .modulateRotate(o0)
+                .scale(() => avgFrequency * 0.01)
+                .modulate(noise(10, 2))
+                .rotate(1, 0.2)
+                .layer(o0, 0.1)
+                .modulateScrollY(noise(3), -0.1)
+                .scale(0.999)
+                .modulate(voronoi(1, 1), 0.08)
+                .out(o0);
+            break;
+        case 11: 
+            shape(8, 0.5)
+                .scale(0.3, 3)
+                .rotate(-1.3)
+                .scrollY(0, -0.3)
+                .repeat(2, 2, () => Math.sin(time) * 4, () => Math.sin(time) * 4)
+                .add(src(o0).scrollY(0.001), 0.99)
+                .scale(1.01)
+                .layer(src(o0)
+                    .mask(shape(3, () => Math.sin(time) * 0.5 + 0.8, -0.001)
+                        .rotate(0, 2).scale(0.5, 0.5))
+                    .shift([0, -0.001].fast(0.1), 0, [-0.001, 0.001])
+                    .colorama([0, 0, 0, 0].fast(0.5)) // negro
+                    .scrollY(-0.005))
+                .blend(o0, 0.4)
+                .saturate(0.5) // sat
+                .out();
+            break; 
+    }
+}
