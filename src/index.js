@@ -19,17 +19,11 @@ let data = [];
 
 let ring, ring2, ring3, curve, curve2, curve3;
 let composer;
-
 let cubos = [], bamboo = [];
-
 let avgFrequency, avgCount = 0, avgCount2 = 0, avgCount3 = 0;
-
 let label, label2, label3;
-
 let consethydra = 0; 
-
 let sentido = 1; 
-
 let hydraCount = 0; 
 
 const hydra = new Hydra({
@@ -489,7 +483,7 @@ export function showCredits() {
 
     const credits = document.createElement('div');
     credits.id = 'credits';
-    credits.innerHTML = 'THREE.studies<br><br>para eCello de 5 cuerdas, livercoder y navegador<br> Iracema de Andrade y Emilio Ocelotl';
+    credits.innerHTML = '';
     credits.style.display = 'block';
     
     // Agregarlo al DOM
