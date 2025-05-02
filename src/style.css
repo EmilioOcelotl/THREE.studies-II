@@ -14,7 +14,7 @@ body {
 
 .label {
     pointer-events: none; 
-    font-size: 40px; 
+    font-size: 30px; 
 
 }
 
@@ -22,7 +22,7 @@ body {
     background-color: #000; 
     color: #b2b2ff; 
     font-family: "Silkscreen", sans-serif; 
-    font-size: 40px; 
+    font-size: 20px; 
     border: 2px solid #b2b2ff; 
     padding: 10px 20px; 
     border-radius: 5px; 
@@ -41,5 +41,5 @@ body {
     margin-bottom: 20px; 
     color: #b2b2ff; 
     font-family: "Silkscreen", sans-serif; 
-    font-size: 40px; 
+    font-size: 20px; 
 }
