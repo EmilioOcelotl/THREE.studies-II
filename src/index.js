@@ -12,6 +12,8 @@ import  { audioCtx, g1, g2 } from './osc.js';
 import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
 import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
+let source, onsetdetector;
+
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
 
@@ -42,6 +44,7 @@ const startButton = document.getElementById('startButton');
 startButton.addEventListener('click', init);
 
 function init() {
+    hydraSelect(0);
     const overlay = document.getElementById('overlay');
     overlay.remove();
 
@@ -98,7 +101,7 @@ function init() {
 
     const numBamboos = 15; // Cambia para ajustar el número de bamboos
     const radius = 100; // Cambia para ajustar el radio de la circunferencia
-    const bambooHeight = 2000; // Altura de cada bamboo
+    const bambooHeight = 500; // Altura de cada bamboo
     const bambooWidth = 0.5; // Ancho de cada bamboo
 
     const bambooMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -125,6 +128,7 @@ function init() {
         scene.add(bamboo);
     }
 
+    /*
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
             //const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -141,6 +145,12 @@ function init() {
         .catch(err => {
             console.log('Error al acceder al mic: ', err);
         });
+        */  
+    // MMLL
+
+    webaudio = new MMLLWebAudioSetup(256,2,callback,setup); 
+
+    playAudioFile("./audio/three-rest.ogg");
 
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
@@ -198,13 +208,14 @@ function init() {
 
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.5, // Intensidad del bloom
+        0.6, // Intensidad del bloom
         0.4, // Radio
         0.3 // Umbral
     );
 
     composer.addPass(bloomPass);
 
+    /*
     osc(() => (avgFrequency / 1)+0.1, 0.7, 0)
         .kaleid(7)
         .color(1, 1, 1)
@@ -218,7 +229,7 @@ function init() {
                 .scale(1)
         )
         .out(o0);
-
+*/  
     createCubes();
 
     labelRenderer = new CSS2DRenderer();
@@ -259,10 +270,6 @@ function init() {
     labeltext3.style.color = 'rgb(178, 255, 178)'; // Cambia a azul oscuro
     label3 = new CSS2DObject(labeltext3);
     scene.add(label3);
-
-    // MMLL
-
-    webaudio = new MMLLWebAudioSetup(256,2,callback,setup); 
 
 }
 
@@ -496,126 +503,137 @@ const setup = function SetUp(sampleRate){
     onsetdetector = new MMLLOnsetDetector(sampleRate); //default threshold 0.34
     webaudio.audiocontext.close();
     webaudio.audiocontext = audioCtx;
+    webaudio.onsetdetector = onsetdetector; 
 
 }
 
-var callback = function CallBack(input,output,n) {
-   
-    var detection = onsetdetector.next( input.monoinput );
+var callback = function CallBack(input, output, n) {
+    var detection = onsetdetector.next(input.monoinput);
     
-    if(detection) { //aqui antes había un !mute
-        // console.log('onsetnow');
-        consethydra++;
-        hydraCount++;
+    if(detection) {
 
-        if(consethydra == 63 || consethydra == 62 || consethydra == 61 || consethydra == 60 ){
+        
+        // Debug: muestra el valor actual de consethydra
+        console.log('consethydra:', consethydra, 'hydraCount:', hydraCount%11);
+        
+        // Cambiar fondo para valores específicos
+        if(consethydra >= 59 && consethydra <= 62) {
             scene.background = vit;
         } else {
-            scene.background = new THREE.Color( 0x00000 );
+            scene.background = new THREE.Color(0x000000);
         }
 
-        if(consethydra == 64){
-            consethydra = 0; 
-            sentido = sentido * -1; 
-            hydraSelect(hydraCount)
-            console.log("cambio")
-            // console.log(sentido)
-            
+        if(consethydra==63){
+            consethydra = 0;
         }
+        
+        // Reiniciar contador y cambiar sentido cuando llega a 63
+        if(consethydra == 58) {
+            sentido *= -1; 
+            hydraSelect(hydraCount % 11);
+            console.log("Cambio realizado - sentido:", sentido);
+            hydraCount++;
 
+        }
+        consethydra++;
     }
 };
 
 function hydraSelect(sketch) {
     switch (sketch) {
         case 0:
-            osc(() => (avgFrequency / 1) + 0.1, 0.1, 0) // osci
-                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+            osc(() => (avgFrequency / 2) + 0.1, 0.1, 1) // osci
+                .color(0.698/2, 0.698/2, 1.0) // gris (mitad de blanco)
                 .kaleid(10) // kal
                 .diff(voronoi(1, 1, 0) // voro, vorovel
                     .color(0, 0, 0)) // negro
                 .rotate(10, 1) // ang, rotvel 
                 .modulateScrollX(o0, () => (avgFrequency / 1) + 0.1) // mod  
                 .scale(1, 1, 1) // scl, sclX, sclY
-                .saturate(0.5) // sat
+                .saturate(4) // sat
                 .out(o0);
             break;
         case 1:
-            osc(() => (avgFrequency / 1) + 0.1, 0.1, 0) // osci
-                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+            osc(() => (avgFrequency / 4) + 0.1, 0.1, 1) // osci
+                .color(0.698/2, 0.698/2, 1) // gris (mitad de blanco)
                 .kaleid(5) // kal
                 .diff(voronoi(2, 1, 0) // voro, vorovel
                     .color(0, 0, 0)) // negro
                 .rotate(180, 2) // ang, rotvel 
                 .modulate(o0, () => (avgFrequency / 1) + 0.1) // mod  
                 .scale(2, 2, 2) // scl, sclX, sclY
-                .saturate(0.5) // sat
+                .saturate(4) // sat
                 .out(o0);
             break;
         case 2:
-            osc(() => (avgFrequency / 1) + 0.1, 0.1, 0) // osci
-                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
-                .kaleid(5) // kal
-                .diff(voronoi(2, 1, 0) // voro, vorovel
-                    .color(0, 0, 0)) // negro
+            osc(() => (avgFrequency / 8) + 0.1, 0.1, 1) // osci
+                .color(0.698/2, 0.698/2, 1) // gris (mitad de blanco)
+                .kaleid(6) // kal
+                .diff(voronoi(2, 1, 1) // voro, vorovel
+                     .color(0, 1, 0)) // negro
                 .rotate(10, 2) // ang, rotvel 
                 .modulate(o0, () => (avgFrequency * 0.0003)) // mod  
-                .scale(1, 1, 1) // scl, sclX, sclY
-                .saturate(0.5) // sat
+                .scale(1.1) // scl, sclX, sclY
+                .saturate(2) // sat
                 .out(o0);
             break;
         case 3:
-            osc(20, 0.01, 0) // osci
-                .color(0.5, 0.5, 0.5) // gris (mitad de blanco)
+            osc(() => (avgFrequency / 8) + 0.1, 0.01, 1) // osci
+                .color(1, 0.698/2, 0.698/2) // gris (mitad de blanco)
                 .kaleid(20)
                 .rotate(1, 0.1)
                 .modulate(o0, () => avgFrequency * 0.0003) // mod
                 .scale(0.99)
-                .saturate(0.5) // sat
+                .saturate(2) // sat
                 .out(o0);
             break;
         case 4:
-            voronoi(8, 1)
-                .mult(osc(10, 0.1, 0) // osci
-                    .color(0.5, 0.5, 0.5)) // gris (mitad de blanco)
+            osc(8, () => (avgFrequency / 1) + 0.1, 1)
+                .mult(osc(10, 0.1, 1) // osci
+                    .color(1, 0.698/2, 0.698/2)) // gris (mitad de blanco)
                 .modulate(o0, 0.5)
                 .add(o0, 0.8)
                 .scrollY(-0.01)
                 .scale(0.99)
                 .modulate(voronoi(8, 1), 0.008)
                 .luma(() => avgFrequency * 0.0009) // mod
-                .saturate(0.5) // sat
+                .saturate(4) // sat
                 .out();
             break;
         case 5:
-            voronoi(8, 1)
-                .mult(osc(10, 0.1, 0))
-                .modulate(o0, 0.5)
-                .add(o0, 0.8)
-                .scrollY(-0.01)
-                .scale(0.99)
-                .modulate(voronoi(8, 1), 0.008)
-                .luma(() => avgFrequency * 0.0009) // mod
-                .out();
+            osc(() => (avgFrequency / 1) + 0.1, 0.1, 1) // osci
+                .color(1, 0.698/2, 0.698/2) // gris (mitad de blanco)
+                .kaleid(2) // kal
+                //.diff(voronoi(1, 1, 0) // voro, vorovel
+                //    .color(0, 0, 0)) // negro
+                .rotate(1, 1) // ang, rotvel 
+                .modulateScrollX(o0, () => avgFrequency * 109) // mod  
+                .scale(1, 1, 1) // scl, sclX, sclY
+                .saturate(4) // sat
+                .out(o0);
             break;
         case 6:
-            osc(5, 0.9, 0)
+            osc(5, (avgFrequency / 1)+0.1, 1)
+            .color(0.698/2, 0.698/2, 1)
                 .kaleid([3, 4, 5, 7, 8, 9, 10].fast(0.1))
                 .rotate(0.009, () => Math.sin(time) * -0.0001)
                 .modulateRotate(o0, () => Math.sin(time) * 0.0003)
                 .modulate(o0, () => avgFrequency * 0.0009) // mod
                 .scale(0.99) // escala estática
+                .saturate(4)
                 .out(o0);
             break;
         case 7:
-            osc(5)
+            osc(5, 1, 1)
+            .color(0.698/2, 0.698/2, 1)
                 .modulate(noise(6), 0.22).diff(o0)
                 .modulateScrollY(osc(0.8).modulate(osc(10).modulate(osc(2, 0.1), () => avgFrequency * 0.01).rotate(), 0.91))
                 .scale(0.79)
+                .saturate(2)
                 .out();
             break;
         case 8:
-            osc(105).rotate(0.11, 0.1).modulate(osc(10).rotate(0.3).add(o0, 0.1)).add(osc(20, 0.01, 0)).out(o0);
+            osc(105, 1, 1).rotate(0.11, 0.1).modulate(osc(10).rotate(0.3).add(o0, 0.1)).add(osc(20, 0.01, 0)).out(o0);
             osc(50, 0.005).diff(o0).modulate(o1, () => avgFrequency * 0.00009).out(o1);
             render(o1);
             break;
@@ -664,4 +682,38 @@ function hydraSelect(sketch) {
                 .out();
             break; 
     }
+}
+
+function playAudioFile(filePath) {
+    fetch(filePath)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => {
+            // Usar el mismo audioContext de webaudio
+            return webaudio.audiocontext.decodeAudioData(arrayBuffer);
+        })
+        .then(audioBuffer => {
+            // Crear source usando el mismo contexto
+            source = webaudio.audiocontext.createBufferSource();
+            source.buffer = audioBuffer;
+            
+            // Configurar analizador
+            analyser = webaudio.audiocontext.createAnalyser();
+            analyser.fftSize = 4096;
+            analyser.smoothingTimeConstant = 0.85;
+            data = new Uint8Array(analyser.frequencyBinCount);
+            
+            // Conexión directa sin usar switchAudioSource
+            source.connect(analyser);
+            analyser.connect(webaudio.audiocontext.destination);
+            
+            // Iniciar reproducción inmediatamente
+            source.start(0);
+            console.log("Audio iniciado correctamente");
+            
+            // Iniciar animación
+            renderer.setAnimationLoop(animate);
+        })
+        .catch(err => {
+            console.error('Error al cargar audio:', err);
+        });
 }
