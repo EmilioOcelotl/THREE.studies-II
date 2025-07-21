@@ -13,9 +13,13 @@ body {
 }
 
 .label {
-    pointer-events: none; 
-    font-size: 30px; 
-
+    pointer-events: none;
+    font-size: 20px;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000; /* Efecto de borde negro */
 }
 
 #startButton {

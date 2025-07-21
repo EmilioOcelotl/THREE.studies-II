@@ -8,6 +8,7 @@ import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
 import  { audioCtx, g1, g2 } from './osc.js';
+//import  { audioCtx, g1, g2, setupGranulatorsGUI } from './tresGUI.js';
 
 import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
 import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
@@ -102,7 +103,7 @@ function init() {
     const numBamboos = 15; // Cambia para ajustar el número de bamboos
     const radius = 100; // Cambia para ajustar el radio de la circunferencia
     const bambooHeight = 500; // Altura de cada bamboo
-    const bambooWidth = 0.5; // Ancho de cada bamboo
+    const bambooWidth = 0.25; // Ancho de cada bamboo
 
     const bambooMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
@@ -127,6 +128,7 @@ function init() {
         // Añade el bamboo a la escena
         scene.add(bamboo);
     }
+    window.addEventListener( 'resize', onWindowResize );
 
     /*
     navigator.mediaDevices.getUserMedia({ audio: true })
@@ -150,7 +152,7 @@ function init() {
 
     webaudio = new MMLLWebAudioSetup(256,2,callback,setup); 
 
-    playAudioFile("./audio/three-rest.ogg");
+    playAudioFile("./audio/three-rest.wav");
 
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
@@ -165,39 +167,39 @@ function init() {
     curve = new THREE.CatmullRomCurve3(pointsCurve, true);
 
     // Generar la geometría de tubo
-    const geometryTube = new THREE.TubeGeometry(curve, 400, 0.25, 8, false);
-    const materialTube = new THREE.MeshBasicMaterial({ color: 0xb2b2ff, wireframe: false });
+    const geometryTube = new THREE.TubeGeometry(curve, 400, 0.5, 8, false);
+    const materialTube = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit, wireframe: false });
     const tube = new THREE.Mesh(geometryTube, materialTube);
     scene.add(tube);
 
     // Crear el primer tubo complementario (reflejado en el eje Y)
     const complementPoints1 = pointsCurve.map(point => new THREE.Vector3(point.x, -point.y, point.z));
     curve2 = new THREE.CatmullRomCurve3(complementPoints1, true);
-    const geometryTubeComplement1 = new THREE.TubeGeometry(curve2, 400, 0.25, 8, false);
-    const materialTubeComplement1 = new THREE.MeshBasicMaterial({ color: 0xffb2ff, wireframe: false }); // Color complementario
+    const geometryTubeComplement1 = new THREE.TubeGeometry(curve2, 400, 0.5, 8, false);
+    const materialTubeComplement1 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit, wireframe: false }); // Color complementario
     const tubeComplement1 = new THREE.Mesh(geometryTubeComplement1, materialTubeComplement1);
     scene.add(tubeComplement1);
 
     // Crear el segundo tubo complementario (reflejado en el eje Z)
     const complementPoints2 = pointsCurve.map(point => new THREE.Vector3(point.x, point.y, -point.z));
     curve3 = new THREE.CatmullRomCurve3(complementPoints2, true);
-    const geometryTubeComplement2 = new THREE.TubeGeometry(curve3, 400, 0.25, 8, false);
-    const materialTubeComplement2 = new THREE.MeshBasicMaterial({ color: 0xb2ffb2, wireframe: false }); // Otro color complementario
+    const geometryTubeComplement2 = new THREE.TubeGeometry(curve3, 400, 0.5, 8, false);
+    const materialTubeComplement2 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit, wireframe: false }); // Otro color complementario
     const tubeComplement2 = new THREE.Mesh(geometryTubeComplement2, materialTubeComplement2);
     scene.add(tubeComplement2);
 
-    const cylinderGeometry = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0xb2b2ff });
+    const cylinderGeometry = new THREE.CylinderGeometry(0, 3.25, 12, 32); // (radio superior, radio inferior, altura, segmentos)
+    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
     ring = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
     scene.add(ring);
 
-    const cylinderGeometry2 = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial2 = new THREE.MeshBasicMaterial({ color: 0xffb2ff });
+    const cylinderGeometry2 = new THREE.CylinderGeometry(0, 3.25, 12, 32); // (radio superior, radio inferior, altura, segmentos)
+    const cylinderMaterial2 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
     ring2 = new THREE.Mesh(cylinderGeometry2, cylinderMaterial2);
     scene.add(ring2);
 
-    const cylinderGeometry3 = new THREE.CylinderGeometry(0.75, 0.75, 4, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial3 = new THREE.MeshBasicMaterial({ color: 0xb2ffb2 });
+    const cylinderGeometry3 = new THREE.CylinderGeometry(0, 3.25, 12, 32); // (radio superior, radio inferior, altura, segmentos)
+    const cylinderMaterial3 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
     ring3 = new THREE.Mesh(cylinderGeometry3, cylinderMaterial3);
     scene.add(ring3);
 
@@ -209,27 +211,12 @@ function init() {
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         0.6, // Intensidad del bloom
-        0.4, // Radio
+        0.9, // Radio
         0.3 // Umbral
     );
 
     composer.addPass(bloomPass);
 
-    /*
-    osc(() => (avgFrequency / 1)+0.1, 0.7, 0)
-        .kaleid(7)
-        .color(1, 1, 1)
-        .rotate(0, 0.1)
-        .modulate(o0, () => (avgFrequency + 0.0001) * 0.03)
-        .modulate(noise(() => (avgFrequency / 30) * 2, 0.01))
-        .scale(1.1)
-        .blend(
-            osc(() => (avgFrequency > 0 ? 1 : 0.1), 0.1, 0)
-                .color(0, 0, 0)
-                .scale(1)
-        )
-        .out(o0);
-*/  
     createCubes();
 
     labelRenderer = new CSS2DRenderer();
@@ -244,8 +231,8 @@ function init() {
     // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
     labeltext.style.padding = '10px';
     labeltext.style.borderRadius = '10px';
-    labeltext.style.margin = '25px'; // Ajusta el margen según sea necesario
-    labeltext.style.color = 'rgb(178, 178, 255)'; // Cambia a azul oscuro
+    labeltext.style.margin = '-50px'; // Ajusta el margen según sea necesario
+    labeltext.style.color = 'rgb(255, 255, 255)'; // Cambia a azul oscuro
     label = new CSS2DObject(labeltext);
     scene.add(label);
 
@@ -255,8 +242,8 @@ function init() {
     // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
     labeltext2.style.padding = '10px';
     labeltext2.style.borderRadius = '10px';
-    labeltext2.style.margin = '25px'; // Ajusta el margen según sea necesario
-    labeltext2.style.color = 'rgb(255, 178, 255)'; // Cambia a azul oscuro
+    labeltext2.style.margin = '-50px'; // Ajusta el margen según sea necesario
+    labeltext2.style.color = 'rgb(255, 255, 255)'; // Cambia a azul oscuro
     label2 = new CSS2DObject(labeltext2);
     scene.add(label2);
 
@@ -266,8 +253,8 @@ function init() {
     // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
     labeltext3.style.padding = '10px';
     labeltext3.style.borderRadius = '10px';
-    labeltext3.style.margin = '25px'; // Ajusta el margen según sea necesario
-    labeltext3.style.color = 'rgb(178, 255, 178)'; // Cambia a azul oscuro
+    labeltext3.style.margin = '-50px'; // Ajusta el margen según sea necesario
+    labeltext3.style.color = 'rgb(255, 255, 255)'; // Cambia a azul oscuro
     label3 = new CSS2DObject(labeltext3);
     scene.add(label3);
 
@@ -289,10 +276,15 @@ function createCubes() {
     for (let i = 0; i < xgrid; i++) {
         for (let j = 0; j < ygrid; j++) {
 
-            const geometry = new THREE.BoxGeometry(20, 20, 2);
+            const geometry = new THREE.BoxGeometry(30, 30, 8);
             change_uvs(geometry, ux, uy, i, j);
 
-            materials[cubeCount] = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+            materials[cubeCount] = new THREE.MeshBasicMaterial({
+                map: vit,
+                blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
+
+            });
+
             let material2 = materials[cubeCount];
 
             cubos[cubeCount] = new THREE.Mesh(geometry, material2);
@@ -308,10 +300,10 @@ function createCubes() {
             cubos[cubeCount].position.set(x, y, z);
 
             let rand1 = Math.random() * 4 + 2;
-            let rand2 = Math.random() * 4 + 2;
+            // let rand2 = Math.random() * 4 + 2;
 
             cubos[cubeCount].scale.x = rand1;
-            cubos[cubeCount].scale.y = rand2;
+            cubos[cubeCount].scale.y = rand1;
 
             cubos[cubeCount].lookAt(0, 0, 0);
 
@@ -377,7 +369,7 @@ function animate() {
     const position = positionAttribute.array;
     // const time = performance.now() * 0.0005;
 
-    const noiseStrength = 0.4;  // Ajustamos la fuerza de la oscilación
+    const noiseStrength = 0.2;  // Ajustamos la fuerza de la oscilación
     const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
 
     const minScale = 0.77; // Escala mínima cuando no hay sonido
@@ -412,7 +404,7 @@ function animate() {
     positionAttribute.needsUpdate = true;
 
     // Escalar la esfera según la intensidad promedio del sonido
-    points.scale.set(scaleMultiplier * 8, scaleMultiplier * 8, scaleMultiplier * 8);
+    points.scale.set(scaleMultiplier * 10, scaleMultiplier * 6, scaleMultiplier * 10);
 
     //rectGroup.rotation.x += 0.0009;
     //rectGroup.rotation.y -= 0.0016;
@@ -503,7 +495,7 @@ const setup = function SetUp(sampleRate){
     onsetdetector = new MMLLOnsetDetector(sampleRate); //default threshold 0.34
     webaudio.audiocontext.close();
     webaudio.audiocontext = audioCtx;
-    webaudio.onsetdetector = onsetdetector; 
+    // webaudio.onsetdetector = onsetdetector; 
 
 }
 
@@ -514,23 +506,25 @@ var callback = function CallBack(input, output, n) {
 
         
         // Debug: muestra el valor actual de consethydra
-        console.log('consethydra:', consethydra, 'hydraCount:', hydraCount%11);
+        // console.log('consethydra:', consethydra, 'hydraCount:', hydraCount%11);
         
+        /*
         // Cambiar fondo para valores específicos
         if(consethydra >= 59 && consethydra <= 62) {
             scene.background = vit;
         } else {
             scene.background = new THREE.Color(0x000000);
         }
+            */  
 
         if(consethydra==63){
             consethydra = 0;
         }
         
         // Reiniciar contador y cambiar sentido cuando llega a 63
-        if(consethydra == 58) {
+        if(consethydra == (58/2)) {
             sentido *= -1; 
-            hydraSelect(hydraCount % 11);
+            hydraSelect(hydraCount % 4);
             console.log("Cambio realizado - sentido:", sentido);
             hydraCount++;
 
@@ -542,145 +536,45 @@ var callback = function CallBack(input, output, n) {
 function hydraSelect(sketch) {
     switch (sketch) {
         case 0:
-            osc(() => (avgFrequency / 2) + 0.1, 0.1, 1) // osci
-                .color(0.698/2, 0.698/2, 1.0) // gris (mitad de blanco)
-                .kaleid(10) // kal
-                .diff(voronoi(1, 1, 0) // voro, vorovel
-                    .color(0, 0, 0)) // negro
-                .rotate(10, 1) // ang, rotvel 
-                .modulateScrollX(o0, () => (avgFrequency / 1) + 0.1) // mod  
-                .scale(1, 1, 1) // scl, sclX, sclY
-                .saturate(4) // sat
-                .out(o0);
+            osc(19, 0.1, 0.95)
+                .color(0.8 * 8, 0.9 * 4, 1)
+                .modulate(noise(3, 0.1).rotate(0.1, 0.02).scale(1.1), 0.1)
+                .modulate(src(o0).scale(1.1).rotate(0.01), 0.1)
+                .invert()
+                .saturate(0.6)
+                .hue(2)
+                .out();
             break;
+            
         case 1:
-            osc(() => (avgFrequency / 4) + 0.1, 0.1, 1) // osci
-                .color(0.698/2, 0.698/2, 1) // gris (mitad de blanco)
-                .kaleid(5) // kal
-                .diff(voronoi(2, 1, 0) // voro, vorovel
-                    .color(0, 0, 0)) // negro
-                .rotate(180, 2) // ang, rotvel 
-                .modulate(o0, () => (avgFrequency / 1) + 0.1) // mod  
-                .scale(2, 2, 2) // scl, sclX, sclY
-                .saturate(4) // sat
-                .out(o0);
+            osc(10, 0.08, 0.8)
+                .color(1 * 2, 0.8 * 4, 0.9)
+                .modulate(noise(4, 0.1).rotate(0.01, 0.02).scale(1.1), 0.1)
+                .modulate(src(o0).scale(1.1).rotate(0.01), 0.2)
+                .invert()
+                .saturate(0.6)
+                .out();
             break;
+            
         case 2:
-            osc(() => (avgFrequency / 8) + 0.1, 0.1, 1) // osci
-                .color(0.698/2, 0.698/2, 1) // gris (mitad de blanco)
-                .kaleid(6) // kal
-                .diff(voronoi(2, 1, 1) // voro, vorovel
-                     .color(0, 1, 0)) // negro
-                .rotate(10, 2) // ang, rotvel 
-                .modulate(o0, () => (avgFrequency * 0.0003)) // mod  
-                .scale(1.1) // scl, sclX, sclY
-                .saturate(2) // sat
-                .out(o0);
+            osc(19, 0.4, 0.4)
+                .color(1.5, 0.9 * 8, 0.8 * 4)
+                .modulate(noise(1, 0.1).rotate(0.1, 0.02).scale(1.01), 0.5)
+                .modulate(src(o0).scale(1.1).rotate(0.01), 0.1)
+                .invert()
+                .saturate(1.1)
+                .out();
             break;
+            
         case 3:
-            osc(() => (avgFrequency / 8) + 0.1, 0.01, 1) // osci
-                .color(1, 0.698/2, 0.698/2) // gris (mitad de blanco)
-                .kaleid(20)
-                .rotate(1, 0.1)
-                .modulate(o0, () => avgFrequency * 0.0003) // mod
-                .scale(0.99)
-                .saturate(2) // sat
-                .out(o0);
-            break;
-        case 4:
-            osc(8, () => (avgFrequency / 1) + 0.1, 1)
-                .mult(osc(10, 0.1, 1) // osci
-                    .color(1, 0.698/2, 0.698/2)) // gris (mitad de blanco)
-                .modulate(o0, 0.5)
-                .add(o0, 0.8)
-                .scrollY(-0.01)
-                .scale(0.99)
-                .modulate(voronoi(8, 1), 0.008)
-                .luma(() => avgFrequency * 0.0009) // mod
-                .saturate(4) // sat
+            osc(10, 0.14, 0.4)
+                .color(2, 0.9 * 8, 0.8 * 4)
+                .modulate(voronoi(0.8, 0.1).rotate(0.01, 0.02).scale(1.01), 0.3)
+                .modulate(src(o0).scale(1.1).rotate(0.1), 0.2)
+                .invert()
+                .saturate(1.1)
                 .out();
             break;
-        case 5:
-            osc(() => (avgFrequency / 1) + 0.1, 0.1, 1) // osci
-                .color(1, 0.698/2, 0.698/2) // gris (mitad de blanco)
-                .kaleid(2) // kal
-                //.diff(voronoi(1, 1, 0) // voro, vorovel
-                //    .color(0, 0, 0)) // negro
-                .rotate(1, 1) // ang, rotvel 
-                .modulateScrollX(o0, () => avgFrequency * 109) // mod  
-                .scale(1, 1, 1) // scl, sclX, sclY
-                .saturate(4) // sat
-                .out(o0);
-            break;
-        case 6:
-            osc(5, (avgFrequency / 1)+0.1, 1)
-            .color(0.698/2, 0.698/2, 1)
-                .kaleid([3, 4, 5, 7, 8, 9, 10].fast(0.1))
-                .rotate(0.009, () => Math.sin(time) * -0.0001)
-                .modulateRotate(o0, () => Math.sin(time) * 0.0003)
-                .modulate(o0, () => avgFrequency * 0.0009) // mod
-                .scale(0.99) // escala estática
-                .saturate(4)
-                .out(o0);
-            break;
-        case 7:
-            osc(5, 1, 1)
-            .color(0.698/2, 0.698/2, 1)
-                .modulate(noise(6), 0.22).diff(o0)
-                .modulateScrollY(osc(0.8).modulate(osc(10).modulate(osc(2, 0.1), () => avgFrequency * 0.01).rotate(), 0.91))
-                .scale(0.79)
-                .saturate(2)
-                .out();
-            break;
-        case 8:
-            osc(105, 1, 1).rotate(0.11, 0.1).modulate(osc(10).rotate(0.3).add(o0, 0.1)).add(osc(20, 0.01, 0)).out(o0);
-            osc(50, 0.005).diff(o0).modulate(o1, () => avgFrequency * 0.00009).out(o1);
-            render(o1);
-            break;
-        case 9:
-            voronoi(350, 0.15)
-                .modulateScale(osc(8).rotate(Math.sin(time)), 0.5)
-                .thresh(0.8)
-                .modulateRotate(osc(7), 0.4)
-                .thresh(0.7)
-                .diff(src(o0).scale(1.8))
-                .modulateScale(osc(2).modulateRotate(o0, 0.74))
-                .diff(src(o0).rotate([-.012, .01, -.002, 0]).scrollY(0, [-1 / 199800, 0].fast(0.7)))
-                .brightness([-.02, -.17].smooth().fast(0.5))
-                .out();
-            break;
-        case 10:
-            shape(20, 0.11, 0.3)
-                .scale(0.9)
-                .repeat(() => Math.sin(time) * 100)
-                .modulateRotate(o0)
-                .scale(() => avgFrequency * 0.01)
-                .modulate(noise(10, 2))
-                .rotate(1, 0.2)
-                .layer(o0, 0.1)
-                .modulateScrollY(noise(3), -0.1)
-                .scale(0.999)
-                .modulate(voronoi(1, 1), 0.08)
-                .out(o0);
-            break;
-        case 11: 
-            shape(8, 0.5)
-                .scale(0.3, 3)
-                .rotate(-1.3)
-                .scrollY(0, -0.3)
-                .repeat(2, 2, () => Math.sin(time) * 4, () => Math.sin(time) * 4)
-                .add(src(o0).scrollY(0.001), 0.99)
-                .scale(1.01)
-                .layer(src(o0)
-                    .mask(shape(3, () => Math.sin(time) * 0.5 + 0.8, -0.001)
-                        .rotate(0, 2).scale(0.5, 0.5))
-                    .shift([0, -0.001].fast(0.1), 0, [-0.001, 0.001])
-                    .colorama([0, 0, 0, 0].fast(0.5)) // negro
-                    .scrollY(-0.005))
-                .blend(o0, 0.4)
-                .saturate(0.5) // sat
-                .out();
-            break; 
     }
 }
 
@@ -689,31 +583,47 @@ function playAudioFile(filePath) {
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => {
             // Usar el mismo audioContext de webaudio
-            return webaudio.audiocontext.decodeAudioData(arrayBuffer);
+            return audioCtx.decodeAudioData(arrayBuffer);
         })
         .then(audioBuffer => {
             // Crear source usando el mismo contexto
-            source = webaudio.audiocontext.createBufferSource();
+            source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
             
             // Configurar analizador
-            analyser = webaudio.audiocontext.createAnalyser();
+            analyser = audioCtx.createAnalyser();
             analyser.fftSize = 4096;
             analyser.smoothingTimeConstant = 0.85;
             data = new Uint8Array(analyser.frequencyBinCount);
             
             // Conexión directa sin usar switchAudioSource
             source.connect(analyser);
-            analyser.connect(webaudio.audiocontext.destination);
+            analyser.connect(audioCtx.destination);
             
             // Iniciar reproducción inmediatamente
             source.start(0);
             console.log("Audio iniciado correctamente");
-            
+            // setupGranulatorsGUI( source, g1, g2);
+
             // Iniciar animación
             renderer.setAnimationLoop(animate);
         })
         .catch(err => {
             console.error('Error al cargar audio:', err);
         });
+}
+
+function onWindowResize() {
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize( width, height );
+    composer.setSize( width, height );
+
+    effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
+
 }
