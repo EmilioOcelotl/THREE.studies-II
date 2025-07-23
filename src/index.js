@@ -91,7 +91,7 @@ function init() {
 
     //renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     renderer.toneMapping = THREE.ReinhardToneMapping;
-    renderer.toneMappingExposure = Math.pow( 1, 4.0 );
+    renderer.toneMappingExposure = Math.pow(0.4, 1.5 );
 
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
@@ -210,9 +210,9 @@ function init() {
 
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.6, // Intensidad del bloom
+        0.5, // Intensidad del bloom
         0.9, // Radio
-        0.3 // Umbral
+        0.1 // Umbral
     );
 
     composer.addPass(bloomPass);
@@ -261,7 +261,7 @@ function init() {
 }
 
 function createCubes() {
-    const xgrid = 4, ygrid = 4;
+    const xgrid = 3, ygrid = 4;
     const ux = 1 / xgrid;
     const uy = 1 / ygrid;
     const xsize = 500 / xgrid;
@@ -273,21 +273,55 @@ function createCubes() {
     const totalCubes = xgrid * ygrid; // Número total de cubos
     const phi = (1 + Math.sqrt(5)) / 2; // Proporción áurea
 
+    // Crear un canvas temporal para analizar la textura inicial
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = elCanvas.width;
+    tempCanvas.height = elCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(elCanvas, 0, 0);
+    const initialTextureData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+
     for (let i = 0; i < xgrid; i++) {
         for (let j = 0; j < ygrid; j++) {
-
-            const geometry = new THREE.BoxGeometry(30, 30, 8);
+            const geometry = new THREE.BoxGeometry(30, 30, 8, 10, 10, 10); // Añadidas más subdivisiones para mejor deformación
             change_uvs(geometry, ux, uy, i, j);
+
+            // Guardar posiciones originales
+            const positionAttribute = geometry.attributes.position;
+            const originalPositions = new Float32Array(positionAttribute.array);
+            
+            // Precalcular intensidades basadas en la textura inicial
+            const intensities = new Float32Array(positionAttribute.count);
+            const uvAttribute = geometry.attributes.uv;
+            
+            for (let v = 0; v < positionAttribute.count; v++) {
+                const u = uvAttribute.array[v * 2];
+                const vCoord = uvAttribute.array[v * 2 + 1];
+                
+                const px = Math.floor(u * (tempCanvas.width - 1));
+                const py = Math.floor((1 - vCoord) * (tempCanvas.height - 1));
+                const pixelIndex = (py * tempCanvas.width + px) * 4;
+                
+                const r = initialTextureData[pixelIndex] / 255;
+                const g = initialTextureData[pixelIndex + 1] / 255;
+                const b = initialTextureData[pixelIndex + 2] / 255;
+                intensities[v] = (r * 0.3 + g * 0.59 + b * 0.11);
+            }
 
             materials[cubeCount] = new THREE.MeshBasicMaterial({
                 map: vit,
-                blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
-
+                // blending: THREE.AdditiveBlending,
+                wireframe: false // Cambiar a true para debuggear la geometría
             });
 
-            let material2 = materials[cubeCount];
+            cubos[cubeCount] = new THREE.Mesh(geometry, materials[cubeCount]);
 
-            cubos[cubeCount] = new THREE.Mesh(geometry, material2);
+            // Almacenar datos necesarios para la animación
+            cubos[cubeCount].userData = {
+                originalPositions: originalPositions,
+                baseIntensities: intensities,
+                displacementMultiplier: Math.random() * 10 + 5 // Variabilidad entre cubos
+            };
 
             const index = cubeCount;
             const theta = 2 * Math.PI * index / phi;
@@ -299,19 +333,95 @@ function createCubes() {
 
             cubos[cubeCount].position.set(x, y, z);
 
-            let rand1 = Math.random() * 4 + 2;
-            // let rand2 = Math.random() * 4 + 2;
+            // Variabilidad en escala y rotación
+            const randScale = Math.random() * 4 + 2;
+            cubos[cubeCount].scale.set(randScale, randScale, randScale * 0.5);
+            
+            // Rotación inicial aleatoria
+            cubos[cubeCount].rotation.set(
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2
+            );
 
-            cubos[cubeCount].scale.x = rand1;
-            cubos[cubeCount].scale.y = rand1;
-
-            cubos[cubeCount].lookAt(0, 0, 0);
+            // Todos miran hacia el centro pero con variaciones
+            cubos[cubeCount].lookAt(
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20
+            );
 
             scene.add(cubos[cubeCount]);
             cubeCount++;
         }
     }
+
+    // Crear una instancia de canvas para análisis de textura compartida
+    const analysisCanvas = document.createElement('canvas');
+    analysisCanvas.width = 256; // Resolución reducida para mejor rendimiento
+    analysisCanvas.height = 256;
+    const analysisCtx = analysisCanvas.getContext('2d');
+
+    // Función de actualización de vértices optimizada
+    window.updateCubeVertices = function() {
+        // Actualizar textura de análisis
+        analysisCtx.drawImage(elCanvas, 0, 0, analysisCanvas.width, analysisCanvas.height);
+        const textureData = analysisCtx.getImageData(0, 0, analysisCanvas.width, analysisCanvas.height).data;
+        
+        const time = Date.now() * 0.001; // Tiempo para animaciones dinámicas
+        
+        cubos.forEach(cube => {
+            const geometry = cube.geometry;
+            const positionAttribute = geometry.attributes.position;
+            const positions = positionAttribute.array;
+            const originalPositions = cube.userData.originalPositions;
+            const baseIntensities = cube.userData.baseIntensities;
+            const displacementStrength = cube.userData.displacementMultiplier * (1 + Math.sin(time * 0.5) * 0.3); // Variación dinámica
+            
+            const uvAttribute = geometry.attributes.uv;
+            
+            for (let i = 0; i < positions.length; i += 3) {
+                const vertexIndex = i / 3;
+                const u = uvAttribute.array[vertexIndex * 2];
+                const v = uvAttribute.array[vertexIndex * 2 + 1];
+                
+                // Mapear UV a coordenadas de píxel
+                const px = Math.floor(u * (analysisCanvas.width - 1));
+                const py = Math.floor((1 - v) * (analysisCanvas.height - 1));
+                const pixelIndex = (py * analysisCanvas.width + px) * 4;
+                
+                // Obtener color actual
+                const r = textureData[pixelIndex] / 255;
+                const g = textureData[pixelIndex + 1] / 255;
+                const b = textureData[pixelIndex + 2] / 255;
+                const currentIntensity = (r * 0.3 + g * 0.59 + b * 0.11);
+                
+                // Combinar con intensidad base para variación sutil
+                const combinedIntensity = (currentIntensity + baseIntensities[vertexIndex]) * 0.6;
+                
+                // Añadir efecto de onda dinámico
+                const waveEffect = Math.sin(time + vertexIndex * 0.2) * 0.1;
+                
+                // Calcular desplazamiento total
+                const displacement = (combinedIntensity + waveEffect) * displacementStrength;
+                
+                // Restaurar posición original
+                positions[i] = originalPositions[i];
+                positions[i + 1] = originalPositions[i + 1];
+                positions[i + 2] = originalPositions[i + 2];
+                
+                // Aplicar desplazamiento
+                positions[i] += displacement * (0.5 + Math.sin(time * 0.3 + i) * 0.1);
+                positions[i + 1] += displacement * (0.5 + Math.cos(time * 0.35 + i) * 0.1);
+                positions[i + 2] += displacement * (0.7 + Math.sin(time * 0.4 + i) * 0.1);
+            }
+            
+            positionAttribute.needsUpdate = true;
+            geometry.computeVertexNormals();
+        });
+    };
 }
+
 
 function change_uvs(geometry, unitx, unity, offsetx, offsety) {
 
@@ -352,6 +462,8 @@ function createFloatingRectangles(num) {
 
 function animate() {
 
+    updateCubeVertices();
+
     analyser.getByteFrequencyData(data);
 
     const avgFrequency2 = g1.getAvgFrequency(); // Asegúrate de que esta función esté definida
@@ -363,7 +475,7 @@ function animate() {
     avgCount3 = (avgCount3 + avgFrequency3) * 1;
 
     avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
-    avgCount = (avgCount + avgFrequency) * 1;
+    avgCount = (avgCount + avgFrequency) * 1.00005;
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
@@ -372,7 +484,7 @@ function animate() {
     const noiseStrength = 0.2;  // Ajustamos la fuerza de la oscilación
     const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
 
-    const minScale = 0.77; // Escala mínima cuando no hay sonido
+    const minScale = 0.8; // Escala mínima cuando no hay sonido
     const maxScale = 1 + avgFrequency / 256; // Escala máxima cuando hay mucho sonido
     const scaleMultiplier = THREE.MathUtils.lerp(minScale, maxScale, avgFrequency / 256);
 
@@ -404,7 +516,7 @@ function animate() {
     positionAttribute.needsUpdate = true;
 
     // Escalar la esfera según la intensidad promedio del sonido
-    points.scale.set(scaleMultiplier * 10, scaleMultiplier * 6, scaleMultiplier * 10);
+    points.scale.set(scaleMultiplier * 12, scaleMultiplier * 8, scaleMultiplier * 12);
 
     //rectGroup.rotation.x += 0.0009;
     //rectGroup.rotation.y -= 0.0016;
@@ -536,10 +648,10 @@ var callback = function CallBack(input, output, n) {
 function hydraSelect(sketch) {
     switch (sketch) {
         case 0:
-            osc(19, 0.1, 0.95)
+            osc(()=>avgFrequency+1, 0.02, 0.5)
                 .color(0.8 * 8, 0.9 * 4, 1)
-                .modulate(noise(3, 0.1).rotate(0.1, 0.02).scale(1.1), 0.1)
-                .modulate(src(o0).scale(1.1).rotate(0.01), 0.1)
+                .modulate(noise(0.1, 0.1).rotate(0.1, 0.02).scale(1.1), 0.5)
+                .modulate(src(o0).scale(1.1).rotate(0.01), 0.2)
                 .invert()
                 .saturate(0.6)
                 .hue(2)
@@ -547,21 +659,21 @@ function hydraSelect(sketch) {
             break;
             
         case 1:
-            osc(10, 0.08, 0.8)
-                .color(1 * 2, 0.8 * 4, 0.9)
-                .modulate(noise(4, 0.1).rotate(0.01, 0.02).scale(1.1), 0.1)
-                .modulate(src(o0).scale(1.1).rotate(0.01), 0.2)
+            osc(6, 0.08, 0.95)
+                .color(1 * 2, 0.8 * 8, 0.8)
+                .modulate(noise(4, 0.1).rotate(0.01, 0.02).scale(1.1), 0.6)
+                .modulate(src(o0).scale(1.01).rotate(0.01), 0.2)
                 .invert()
                 .saturate(0.6)
                 .out();
             break;
             
         case 2:
-            osc(19, 0.4, 0.4)
+            osc(10, 0.4, 0.4)
                 .color(1.5, 0.9 * 8, 0.8 * 4)
                 .modulate(noise(1, 0.1).rotate(0.1, 0.02).scale(1.01), 0.5)
                 .modulate(src(o0).scale(1.1).rotate(0.01), 0.1)
-                .invert()
+                // .invert()
                 .saturate(1.1)
                 .out();
             break;
@@ -571,7 +683,7 @@ function hydraSelect(sketch) {
                 .color(2, 0.9 * 8, 0.8 * 4)
                 .modulate(voronoi(0.8, 0.1).rotate(0.01, 0.02).scale(1.01), 0.3)
                 .modulate(src(o0).scale(1.1).rotate(0.1), 0.2)
-                .invert()
+                //.invert()
                 .saturate(1.1)
                 .out();
             break;
