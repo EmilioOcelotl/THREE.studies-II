@@ -7,9 +7,8 @@ import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
-import  { audioCtx, g1, g2 } from './osc.js';
-//import  { audioCtx, g1, g2, setupGranulatorsGUI } from './tresGUI.js';
-
+import { audioCtx, g1, g2 } from './osc.js';
+// import  { audioCtx, g1, g2, setupGranulatorsGUI } from './tresGUI.js';
 import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
 import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
@@ -25,9 +24,9 @@ let composer;
 let cubos = [], bamboo = [];
 let avgFrequency, avgCount = 0, avgCount2 = 0, avgCount3 = 0;
 let label, label2, label3;
-let consethydra = 0; 
-let sentido = 1; 
-let hydraCount = 0; 
+let consethydra = 0;
+let sentido = 1;
+let hydraCount = 0;
 
 const hydra = new Hydra({
     canvas: document.getElementById("myCanvas"),
@@ -35,7 +34,7 @@ const hydra = new Hydra({
     //makeGlobal: false
 }) // antes tenía .synth aqui 
 
-let webaudio; 
+let webaudio;
 
 let elCanvas = document.getElementById("myCanvas");
 vit = new THREE.CanvasTexture(elCanvas);
@@ -70,12 +69,12 @@ function init() {
 
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.4, // Tamaño de cada partícula
+        size: 0.6, // Tamaño de cada partícula
         map: vit,
         //transparent: true, // Para manejar la transparencia del sprite
         //alphaTest: 0.5, // Ajusta para evitar el renderizado de pixeles transparentes
         blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
-      });
+    });
 
     const positionAttribute = geometry.attributes.position;
     originalPosition = Float32Array.from(positionAttribute.array); // Guardamos las posiciones originales
@@ -91,7 +90,7 @@ function init() {
 
     //renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     renderer.toneMapping = THREE.ReinhardToneMapping;
-    renderer.toneMappingExposure = Math.pow(0.4, 1.5 );
+    renderer.toneMappingExposure = Math.pow(0.4, 1.5);
 
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
@@ -121,38 +120,16 @@ function init() {
         bamboo.position.set(x, 0, z); // Ajusta la altura para que toque el suelo
         bamboo.lookAt(0, 0, 0); // Hace que cada bamboo mire hacia el centro
 
-    // Genera una inclinación aleatoria para el bamboo
-    const tiltAngle = (Math.random() - 0.5) * Math.PI / 1.5; // Cambia este valor para ajustar el rango de inclinación
-    bamboo.rotation.x = tiltAngle; // Rota en el eje X
+        // Genera una inclinación aleatoria para el bamboo
+        const tiltAngle = (Math.random() - 0.5) * Math.PI / 1.5; // Cambia este valor para ajustar el rango de inclinación
+        bamboo.rotation.x = tiltAngle; // Rota en el eje X
 
         // Añade el bamboo a la escena
         scene.add(bamboo);
     }
-    window.addEventListener( 'resize', onWindowResize );
+    window.addEventListener('resize', onWindowResize);
 
-    /*
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            //const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioCtx.createMediaStreamSource(stream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 4096; // Tamaño de FFT
-            analyser.smoothingTimeConstant = 0.85;
-            const bufferLength = analyser.frequencyBinCount;
-            data = new Uint8Array(bufferLength);
-            source.connect(analyser);
-            console.log("Mic activado")
-            renderer.setAnimationLoop(animate);
-        })
-        .catch(err => {
-            console.log('Error al acceder al mic: ', err);
-        });
-        */  
-    // MMLL
-
-    webaudio = new MMLLWebAudioSetup(256,2,callback,setup); 
-
-    playAudioFile("./audio/three-rest.wav");
+    playAudioFile("./audio/three2.ogg");
 
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
@@ -258,6 +235,8 @@ function init() {
     label3 = new CSS2DObject(labeltext3);
     scene.add(label3);
 
+
+
 }
 
 function createCubes() {
@@ -283,25 +262,25 @@ function createCubes() {
 
     for (let i = 0; i < xgrid; i++) {
         for (let j = 0; j < ygrid; j++) {
-            const geometry = new THREE.BoxGeometry(30, 30, 8, 10, 10, 10); // Añadidas más subdivisiones para mejor deformación
+            const geometry = new THREE.PlaneGeometry(30, 30, 10, 10); // Ancho, alto, segmentos en ancho, segmentos en alto
             change_uvs(geometry, ux, uy, i, j);
 
             // Guardar posiciones originales
             const positionAttribute = geometry.attributes.position;
             const originalPositions = new Float32Array(positionAttribute.array);
-            
+
             // Precalcular intensidades basadas en la textura inicial
             const intensities = new Float32Array(positionAttribute.count);
             const uvAttribute = geometry.attributes.uv;
-            
+
             for (let v = 0; v < positionAttribute.count; v++) {
                 const u = uvAttribute.array[v * 2];
                 const vCoord = uvAttribute.array[v * 2 + 1];
-                
+
                 const px = Math.floor(u * (tempCanvas.width - 1));
                 const py = Math.floor((1 - vCoord) * (tempCanvas.height - 1));
                 const pixelIndex = (py * tempCanvas.width + px) * 4;
-                
+
                 const r = initialTextureData[pixelIndex] / 255;
                 const g = initialTextureData[pixelIndex + 1] / 255;
                 const b = initialTextureData[pixelIndex + 2] / 255;
@@ -336,7 +315,7 @@ function createCubes() {
             // Variabilidad en escala y rotación
             const randScale = Math.random() * 4 + 2;
             cubos[cubeCount].scale.set(randScale, randScale, randScale * 0.5);
-            
+
             // Rotación inicial aleatoria
             cubos[cubeCount].rotation.set(
                 Math.random() * Math.PI * 2,
@@ -363,13 +342,13 @@ function createCubes() {
     const analysisCtx = analysisCanvas.getContext('2d');
 
     // Función de actualización de vértices optimizada
-    window.updateCubeVertices = function() {
+    window.updateCubeVertices = function () {
         // Actualizar textura de análisis
         analysisCtx.drawImage(elCanvas, 0, 0, analysisCanvas.width, analysisCanvas.height);
         const textureData = analysisCtx.getImageData(0, 0, analysisCanvas.width, analysisCanvas.height).data;
-        
+
         const time = Date.now() * 0.001; // Tiempo para animaciones dinámicas
-        
+
         cubos.forEach(cube => {
             const geometry = cube.geometry;
             const positionAttribute = geometry.attributes.position;
@@ -377,45 +356,45 @@ function createCubes() {
             const originalPositions = cube.userData.originalPositions;
             const baseIntensities = cube.userData.baseIntensities;
             const displacementStrength = cube.userData.displacementMultiplier * (1 + Math.sin(time * 0.5) * 0.3); // Variación dinámica
-            
+
             const uvAttribute = geometry.attributes.uv;
-            
+
             for (let i = 0; i < positions.length; i += 3) {
                 const vertexIndex = i / 3;
                 const u = uvAttribute.array[vertexIndex * 2];
                 const v = uvAttribute.array[vertexIndex * 2 + 1];
-                
+
                 // Mapear UV a coordenadas de píxel
                 const px = Math.floor(u * (analysisCanvas.width - 1));
                 const py = Math.floor((1 - v) * (analysisCanvas.height - 1));
                 const pixelIndex = (py * analysisCanvas.width + px) * 4;
-                
+
                 // Obtener color actual
                 const r = textureData[pixelIndex] / 255;
                 const g = textureData[pixelIndex + 1] / 255;
                 const b = textureData[pixelIndex + 2] / 255;
                 const currentIntensity = (r * 0.3 + g * 0.59 + b * 0.11);
-                
+
                 // Combinar con intensidad base para variación sutil
                 const combinedIntensity = (currentIntensity + baseIntensities[vertexIndex]) * 0.6;
-                
+
                 // Añadir efecto de onda dinámico
                 const waveEffect = Math.sin(time + vertexIndex * 0.2) * 0.1;
-                
+
                 // Calcular desplazamiento total
                 const displacement = (combinedIntensity + waveEffect) * displacementStrength;
-                
+
                 // Restaurar posición original
                 positions[i] = originalPositions[i];
                 positions[i + 1] = originalPositions[i + 1];
                 positions[i + 2] = originalPositions[i + 2];
-                
+
                 // Aplicar desplazamiento
                 positions[i] += displacement * (0.5 + Math.sin(time * 0.3 + i) * 0.1);
                 positions[i + 1] += displacement * (0.5 + Math.cos(time * 0.35 + i) * 0.1);
                 positions[i + 2] += displacement * (0.7 + Math.sin(time * 0.4 + i) * 0.1);
             }
-            
+
             positionAttribute.needsUpdate = true;
             geometry.computeVertexNormals();
         });
@@ -462,20 +441,18 @@ function createFloatingRectangles(num) {
 
 function animate() {
 
-    updateCubeVertices();
-
     analyser.getByteFrequencyData(data);
 
-    const avgFrequency2 = g1.getAvgFrequency(); // Asegúrate de que esta función esté definida
+    //const avgFrequency2 = g1.getAvgFrequency(); // Asegúrate de que esta función esté definida
     // console.log("Promedio de frecuencia granulador:", avgFrequency2);
-    avgCount2 = (avgCount2 + avgFrequency2) * 1;
+    //avgCount2 = (avgCount2 + avgFrequency2) * 1;
 
-    const avgFrequency3 = g2.getAvgFrequency(); // Asegúrate de que esta función esté definida
+    //const avgFrequency3 = g2.getAvgFrequency(); // Asegúrate de que esta función esté definida
     // console.log("Promedio de frecuencia granulador:", avgFrequency2);
-    avgCount3 = (avgCount3 + avgFrequency3) * 1;
+    //avgCount3 = (avgCount3 + avgFrequency3) * 1;
 
     avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
-    avgCount = (avgCount + avgFrequency) * 1.00005;
+    avgCount = (avgCount + avgFrequency) * 1;
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
@@ -484,7 +461,7 @@ function animate() {
     const noiseStrength = 0.2;  // Ajustamos la fuerza de la oscilación
     const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
 
-    const minScale = 0.8; // Escala mínima cuando no hay sonido
+    const minScale = 0.77; // Escala mínima cuando no hay sonido
     const maxScale = 1 + avgFrequency / 256; // Escala máxima cuando hay mucho sonido
     const scaleMultiplier = THREE.MathUtils.lerp(minScale, maxScale, avgFrequency / 256);
 
@@ -502,8 +479,8 @@ function animate() {
 
         // Aplicamos oscilaciones sinusoidales
         const sineOffset = Math.sin(origX * 0.3 + (avgCount / 1000)) * noiseStrength +
-            Math.cos(origY * 0.3 +  (avgCount / 1000)) * noiseStrength +
-            Math.sin(origZ * 0.3 +  (avgCount / 1000)) * noiseStrength;
+            Math.cos(origY * 0.3 + (avgCount / 1000)) * noiseStrength +
+            Math.sin(origZ * 0.3 + (avgCount / 1000)) * noiseStrength;
 
         const totalOffset = sineOffset + audioOffset;
 
@@ -516,7 +493,7 @@ function animate() {
     positionAttribute.needsUpdate = true;
 
     // Escalar la esfera según la intensidad promedio del sonido
-    points.scale.set(scaleMultiplier * 12, scaleMultiplier * 8, scaleMultiplier * 12);
+    points.scale.set(scaleMultiplier * 12, scaleMultiplier * 12, scaleMultiplier * 12);
 
     //rectGroup.rotation.x += 0.0009;
     //rectGroup.rotation.y -= 0.0016;
@@ -552,13 +529,13 @@ function animate() {
     const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
     ring3.quaternion.copy(quaternion3);
 
-    const amplitudeX = 1 + (avgCount/1000); // Amplitud mayor en X
+    const amplitudeX = 1 + (avgCount / 1000); // Amplitud mayor en X
     const amplitudeY = 25;  // Amplitud menor en Y
-    const amplitudeZ = 1 + (avgCount/1000);  // Amplitud media en Z
+    const amplitudeZ = 1 + (avgCount / 1000);  // Amplitud media en Z
 
     const frequency = 0.5; // Frecuencia baja para movimientos suaves
 
-    camera.position.x = amplitudeX * Math.sin((avgCount / 1000* sentido) * frequency) ;
+    camera.position.x = amplitudeX * Math.sin((avgCount / 1000 * sentido) * frequency);
     camera.position.y = amplitudeY * Math.sin((avgCount / 1000) * frequency * 0.5); // Movimiento más lento en Y
     camera.position.z = amplitudeZ * Math.cos((avgCount / 1000 * sentido) * frequency);
 
@@ -596,46 +573,36 @@ export function showCredits() {
     credits.id = 'credits';
     credits.innerHTML = '';
     credits.style.display = 'block';
-    
+
     // Agregarlo al DOM
     document.body.appendChild(credits);
 
 }
 
-const setup = function SetUp(sampleRate){
-    console.log("webaudio setup!");
+const setup = function SetUp(sampleRate) {
     onsetdetector = new MMLLOnsetDetector(sampleRate); //default threshold 0.34
-    webaudio.audiocontext.close();
+    console.log("OnsetDetector creado con SR:", sampleRate);
+
+    //webaudio.audiocontext.close();
     webaudio.audiocontext = audioCtx;
     // webaudio.onsetdetector = onsetdetector; 
+    console.log("webaudio setup!");
 
 }
 
 var callback = function CallBack(input, output, n) {
     var detection = onsetdetector.next(input.monoinput);
-    
-    if(detection) {
 
-        
-        // Debug: muestra el valor actual de consethydra
-        // console.log('consethydra:', consethydra, 'hydraCount:', hydraCount%11);
-        
-        /*
-        // Cambiar fondo para valores específicos
-        if(consethydra >= 59 && consethydra <= 62) {
-            scene.background = vit;
-        } else {
-            scene.background = new THREE.Color(0x000000);
-        }
-            */  
+    if (detection) {
 
-        if(consethydra==63){
+        console.log('consethydra:', consethydra, 'hydraCount:', hydraCount % 11);
+
+        if (consethydra == 63) {
             consethydra = 0;
         }
-        
-        // Reiniciar contador y cambiar sentido cuando llega a 63
-        if(consethydra == (58/2)) {
-            sentido *= -1; 
+
+        if (consethydra == (58)) {
+            sentido *= -1;
             hydraSelect(hydraCount % 4);
             console.log("Cambio realizado - sentido:", sentido);
             hydraCount++;
@@ -645,10 +612,18 @@ var callback = function CallBack(input, output, n) {
     }
 };
 
+webaudio = new MMLLWebAudioSetup(
+    1024,      // blocksize
+    3,         // inputtype (3 = audio buffer)
+    callback,
+    setup,
+    audioCtx   // contexto externo pasado aquí
+);
+
 function hydraSelect(sketch) {
     switch (sketch) {
         case 0:
-            osc(()=>avgFrequency+1, 0.02, 0.5)
+            osc(2, 0.1, 0.5)
                 .color(0.8 * 8, 0.9 * 4, 1)
                 .modulate(noise(0.1, 0.1).rotate(0.1, 0.02).scale(1.1), 0.5)
                 .modulate(src(o0).scale(1.1).rotate(0.01), 0.2)
@@ -657,9 +632,8 @@ function hydraSelect(sketch) {
                 .hue(2)
                 .out();
             break;
-            
         case 1:
-            osc(6, 0.08, 0.95)
+            osc(() => avgFrequency + 1, 0.02, 0.5)
                 .color(1 * 2, 0.8 * 8, 0.8)
                 .modulate(noise(4, 0.1).rotate(0.01, 0.02).scale(1.1), 0.6)
                 .modulate(src(o0).scale(1.01).rotate(0.01), 0.2)
@@ -667,7 +641,6 @@ function hydraSelect(sketch) {
                 .saturate(0.6)
                 .out();
             break;
-            
         case 2:
             osc(10, 0.4, 0.4)
                 .color(1.5, 0.9 * 8, 0.8 * 4)
@@ -677,7 +650,7 @@ function hydraSelect(sketch) {
                 .saturate(1.1)
                 .out();
             break;
-            
+
         case 3:
             osc(10, 0.14, 0.4)
                 .color(2, 0.9 * 8, 0.8 * 4)
@@ -691,39 +664,40 @@ function hydraSelect(sketch) {
 }
 
 function playAudioFile(filePath) {
+
     fetch(filePath)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => {
-            // Usar el mismo audioContext de webaudio
-            return audioCtx.decodeAudioData(arrayBuffer);
-        })
+        .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
         .then(audioBuffer => {
-            // Crear source usando el mismo contexto
+            console.log(audioCtx)
+            // 1. Crea el source y conecta al analyzer
             source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
-            
-            // Configurar analizador
+
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 4096;
-            analyser.smoothingTimeConstant = 0.85;
+            analyser.smoothingTimeConstant = 0.95;
             data = new Uint8Array(analyser.frequencyBinCount);
-            
-            // Conexión directa sin usar switchAudioSource
+
             source.connect(analyser);
             analyser.connect(audioCtx.destination);
-            
-            // Iniciar reproducción inmediatamente
-            source.start(0);
-            console.log("Audio iniciado correctamente");
-            // setupGranulatorsGUI( source, g1, g2);
 
-            // Iniciar animación
+            //webaudio.audiocontext.close();
+            console.log('webaudio.audiocontext:', webaudio.audiocontext);
+            console.log('typeof createBufferSource:', typeof webaudio.audiocontext.createBufferSource);
+            
+            //webaudio.audiocontext = audioCtx;
+            // ¡No llames initAudio otra vez! Porque switchAudioSource lo hace bien.
+            // webaudio.audiorunning = true; // Evita que initAudio() se ejecute de nuevo dentro
+            webaudio.switchAudioSource(3, audioBuffer);
+
+            // 5. Reproduce el audio y lanza animación
+            source.start(0);
             renderer.setAnimationLoop(animate);
         })
-        .catch(err => {
-            console.error('Error al cargar audio:', err);
-        });
+        .catch(console.error);
 }
+
 
 function onWindowResize() {
 
@@ -733,9 +707,8 @@ function onWindowResize() {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
 
-    renderer.setSize( width, height );
-    composer.setSize( width, height );
+    renderer.setSize(width, height);
+    composer.setSize(width, height);
 
-    effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
-
+    // effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 }
