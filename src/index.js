@@ -8,12 +8,13 @@ import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
 import { audioCtx, g1, g2 } from './osc.js';
+import { OnsetDetector } from 'treslib';
 
 // import  { audioCtx, g1, g2, setupGranulatorsGUI } from './tresGUI.js';
 // import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
 // import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
-let source, onsetdetector;
+let source;
 
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
@@ -22,7 +23,7 @@ let data = [];
 
 let ring, ring2, ring3, curve, curve2, curve3;
 let composer;
-let cubos = [], bamboo = [];
+let cubos = [];
 let avgFrequency, avgCount = 0, avgCount2 = 0, avgCount3 = 0;
 let label, label2, label3;
 let consethydra = 0;
@@ -122,7 +123,7 @@ function init() {
         bamboo.lookAt(0, 0, 0); // Hace que cada bamboo mire hacia el centro
 
         // Genera una inclinación aleatoria para el bamboo
-        const tiltAngle = (Math.random() - 0.5) * Math.PI / 1.5; // Cambia este valor para ajustar el rango de inclinación
+        const tiltAngle = (Math.random() - 0.5) * Math.PI / 0.5; // Cambia este valor para ajustar el rango de inclinación
         bamboo.rotation.x = tiltAngle; // Rota en el eje X
 
         // Añade el bamboo a la escena
@@ -580,56 +581,12 @@ export function showCredits() {
 
 }
 
-/*
-const setup = function SetUp(sampleRate) {
-    onsetdetector = new MMLLOnsetDetector(sampleRate); //default threshold 0.34
-    console.log("OnsetDetector creado con SR:", sampleRate);
-
-    //webaudio.audiocontext.close();
-    webaudio.audiocontext = audioCtx;
-    // webaudio.onsetdetector = onsetdetector; 
-    console.log("webaudio setup!");
-
-}
-
-var callback = function CallBack(input, output, n) {
-    var detection = onsetdetector.next(input.monoinput);
-
-    if (detection) {
-
-        console.log('consethydra:', consethydra, 'hydraCount:', hydraCount % 11);
-
-        if (consethydra == 63) {
-            consethydra = 0;
-        }
-
-        if (consethydra == (58)) {
-            sentido *= -1;
-            hydraSelect(hydraCount % 4);
-            console.log("Cambio realizado - sentido:", sentido);
-            hydraCount++;
-
-        }
-        consethydra++;
-    }
-};
-
-webaudio = new MMLLWebAudioSetup(
-    1024,      // blocksize
-    3,         // inputtype (3 = audio buffer)
-    callback,
-    setup,
-    audioCtx   // contexto externo pasado aquí
-);
-
-*/
-
 function hydraSelect(sketch) {
     switch (sketch) {
         case 0:
-            osc(2, 0.1, 0.5)
+            osc(() => avgFrequency + 5, 0.1, 0.5)
                 .color(0.8 * 8, 0.9 * 4, 1)
-                .modulate(noise(0.1, 0.1).rotate(0.1, 0.02).scale(1.1), 0.5)
+                .modulate(noise(0.1, 0.1).rotate(0.1, 0.02).scale(1.1), 0.25)
                 .modulate(src(o0).scale(1.1).rotate(0.01), 0.2)
                 .invert()
                 .saturate(0.6)
@@ -686,16 +643,22 @@ function playAudioFile(filePath) {
             source.connect(analyser);
             analyser.connect(audioCtx.destination);
 
-            //webaudio.audiocontext.close();
-            //console.log('webaudio.audiocontext:', webaudio.audiocontext);
-            //console.log('typeof createBufferSource:', typeof webaudio.audiocontext.createBufferSource);
-            
-            //webaudio.audiocontext = audioCtx;
-            // ¡No llames initAudio otra vez! Porque switchAudioSource lo hace bien.
-            // webaudio.audiorunning = true; // Evita que initAudio() se ejecute de nuevo dentro
-            //webaudio.switchAudioSource(3, audioBuffer);
+            const onsetDetector = new OnsetDetector(audioCtx, audioBuffer);
+            onsetDetector.start((flux) => {
+                console.log(`Onset detectado! Flux: ${flux}`);
+                // Trigger de contadores (como en tu ejemplo)
+                if (consethydra === 58) {
+                    consethydra = 0;
+                    sentido *= -1;
+                    hydraSelect(hydraCount % 4);
+                    // console.log("Cambio realizado - sentido:", sentido);
+                    hydraCount++;
+                }
+                consethydra++;
 
-            // 5. Reproduce el audio y lanza animación
+                //console.log(`Onset detectado! Contadores: hydraCount=${hydraCount}, consethydra=${consethydra}`);
+            })
+
             source.start(0);
             renderer.setAnimationLoop(animate);
         })
