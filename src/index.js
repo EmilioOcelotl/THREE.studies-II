@@ -8,9 +8,10 @@ import Hydra from 'hydra-synth'
 import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
 import './osc.js';
 import { audioCtx, g1, g2 } from './osc.js';
+
 // import  { audioCtx, g1, g2, setupGranulatorsGUI } from './tresGUI.js';
-import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
-import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
+// import { MMLLWebAudioSetup } from '../../MMLL/MMLL.js';
+// import { MMLLOnsetDetector } from '../../MMLL/MMLL.js';
 
 let source, onsetdetector;
 
@@ -34,7 +35,7 @@ const hydra = new Hydra({
     //makeGlobal: false
 }) // antes tenía .synth aqui 
 
-let webaudio;
+//let webaudio;
 
 let elCanvas = document.getElementById("myCanvas");
 vit = new THREE.CanvasTexture(elCanvas);
@@ -579,6 +580,7 @@ export function showCredits() {
 
 }
 
+/*
 const setup = function SetUp(sampleRate) {
     onsetdetector = new MMLLOnsetDetector(sampleRate); //default threshold 0.34
     console.log("OnsetDetector creado con SR:", sampleRate);
@@ -619,6 +621,8 @@ webaudio = new MMLLWebAudioSetup(
     setup,
     audioCtx   // contexto externo pasado aquí
 );
+
+*/
 
 function hydraSelect(sketch) {
     switch (sketch) {
@@ -683,13 +687,13 @@ function playAudioFile(filePath) {
             analyser.connect(audioCtx.destination);
 
             //webaudio.audiocontext.close();
-            console.log('webaudio.audiocontext:', webaudio.audiocontext);
-            console.log('typeof createBufferSource:', typeof webaudio.audiocontext.createBufferSource);
+            //console.log('webaudio.audiocontext:', webaudio.audiocontext);
+            //console.log('typeof createBufferSource:', typeof webaudio.audiocontext.createBufferSource);
             
             //webaudio.audiocontext = audioCtx;
             // ¡No llames initAudio otra vez! Porque switchAudioSource lo hace bien.
             // webaudio.audiorunning = true; // Evita que initAudio() se ejecute de nuevo dentro
-            webaudio.switchAudioSource(3, audioBuffer);
+            //webaudio.switchAudioSource(3, audioBuffer);
 
             // 5. Reproduce el audio y lanza animación
             source.start(0);
