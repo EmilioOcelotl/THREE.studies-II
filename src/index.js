@@ -42,10 +42,10 @@ startButton.addEventListener('click', init);
 function init() {
     hydraSelect(0);
     const overlay = document.getElementById('overlay');
-    overlay.remove();
+    overlay.style.display = "none";
 
     const credits = document.getElementById('credits');
-    credits.remove();
+    credits.style.display = "none";
 
     document.getElementById('container').style.display = "block";
 
@@ -88,7 +88,7 @@ function init() {
     //renderer.toneMapping = THREE.ReinhardToneMapping;
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping; // El más equilibrado para HDR
-    renderer.toneMappingExposure = Math.pow(0.3, 3.0); // 0.027 (más manejable)
+    renderer.toneMappingExposure = Math.pow(0.3, 2.0); // 0.027 (más manejable)
 
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
@@ -127,7 +127,7 @@ function init() {
     }
     window.addEventListener('resize', onWindowResize);
 
-    playAudioFile("./audio/three2.ogg");
+    playAudioFile("./audio/three-proc-mono-stereo.ogg");
 
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
@@ -586,7 +586,6 @@ function hydraSelect(sketch) {
 }
 
 function playAudioFile(filePath) {
-
     fetch(filePath)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
@@ -606,10 +605,9 @@ function playAudioFile(filePath) {
 
             const onsetDetector = new OnsetDetector(audioCtx, audioBuffer, 0.01);
             onsetDetector.start((flux) => {
-
                 console.log(`Onset detectado! Flux: ${flux}`);
                 // Trigger de contadores (como en tu ejemplo)
-                if (consethydra === 58) {
+                if(consethydra === 58) {
                     consethydra = 0;
                     sentido *= -1;
                     hydraSelect(hydraCount % 4);
@@ -617,16 +615,23 @@ function playAudioFile(filePath) {
                     hydraCount++;
                 }
                 consethydra++;
-
-                //console.log(`Onset detectado! Contadores: hydraCount=${hydraCount}, consethydra=${consethydra}`);
             })
+            source.onended = function() {
+                console.log('FIN');
+            
+                // 1. Ocultar el container (opuesto a "block")
+                document.getElementById('container').style.display = "none";
+            
+                // 2. Mostrar overlay y credits (opuesto a "none")
+                overlay.style.display = "block"; // O "flex", "grid", etc., según tu CSS
+                credits.style.display = "block";
+            };
 
             source.start(0);
             renderer.setAnimationLoop(animate);
         })
         .catch(console.error);
 }
-
 
 function onWindowResize() {
 
