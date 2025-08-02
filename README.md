@@ -2,8 +2,6 @@
 
 Sonido y gráficos en el navegador.
 
-Este proyecto utiliza [MMLL](https://github.com/sicklincoln/MMLL)
-
 ## Local
 
 Para correr localmente es necesario arrancar [osc-web-server](https://github.com/EmilioOcelotl/osc-web-server)
@@ -16,7 +14,4 @@ Luego:
 
 ``npm start``
 
-## SuperCollider
-
-Algunos archivos de SC están incluídos. 
-
+Este proyecto usa [treslib](https://github.com/EmilioOcelotl/treslib)

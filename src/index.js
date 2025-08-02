@@ -1,20 +1,22 @@
-// Valores que se pueden modular: osc, smoothing time  
-
 import * as THREE from 'three';
 import { EffectComposer } from '../jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from '../jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import Hydra from 'hydra-synth'
 // import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
-import './osc.js';
-import { audioCtx, g1, g2 } from './osc.js';
-import { OnsetDetector } from 'treslib';
+import { OnsetDetector, Grain, Sequencer, Clock } from 'treslib';
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); // <- definido aquí
+
+const clock = new Clock(audioCtx);
+clock.start();
+const grain1 = new Grain(audioCtx);
+const sequence = [0, 0.1, 0.22, 0.05, 0.12, 0.02, 0, 0, 0.16, 1, 1, 1, 1]; // o cualquier contenido útil
 
 let source, bloomPass;
 
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
-
+let sequencer;
 let data = [];
 
 let ring, ring2, ring3, curve, curve2, curve3;
@@ -128,6 +130,7 @@ function init() {
     window.addEventListener('resize', onWindowResize);
 
     playAudioFile("./audio/three-proc-mono-stereo.ogg");
+    playGrain1("./audio/insonora.mp3")
 
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
@@ -263,7 +266,9 @@ function createCubes() {
 
             materials[cubeCount] = new THREE.MeshBasicMaterial({
                 map: vit,
-                wireframe: false // Cambiar a true para debuggear la geometría
+                wireframe: false, // Cambiar a true para debuggear la geometría
+                blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
+
             });
 
             cubos[cubeCount] = new THREE.Mesh(geometry, materials[cubeCount]);
@@ -382,7 +387,7 @@ function createFloatingRectangles(num) {
 
         const rectGeometry = new THREE.PlaneGeometry(width, height);
         const edges = new THREE.EdgesGeometry(rectGeometry);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 4 });
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 6 });
         const wireframe = new THREE.LineSegments(edges, lineMaterial);
 
         const theta = 2 * Math.PI * i / phi; // Ángulo azimutal
@@ -401,7 +406,6 @@ function createFloatingRectangles(num) {
 function animate() {
 
     analyser.getByteFrequencyData(data);
-    vit.needsUpdate = true;
 
     //const avgFrequency2 = g1.getAvgFrequency(); // Asegúrate de que esta función esté definida
     // console.log("Promedio de frecuencia granulador:", avgFrequency2);
@@ -590,48 +594,87 @@ function playAudioFile(filePath) {
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
         .then(audioBuffer => {
-            console.log(audioCtx)
-            // 1. Crea el source y conecta al analyzer
-            source = audioCtx.createBufferSource();
+            console.log(audioCtx);
+
+            const sequencer = new Sequencer(sequence, (val, time) => {
+                console.log("Triggered value", val, "at", time);
+                grain1.set(val, 1, 0.1, 0.02, 0.1); 
+                grain1.gain = avgFrequency*10; 
+            });
+
+            // Crear el source y demás nodos
+            const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
+
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.3; // volumen
 
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 4096;
             analyser.smoothingTimeConstant = 0.95;
             data = new Uint8Array(analyser.frequencyBinCount);
 
-            source.connect(analyser);
+            source.connect(gainNode);
+            gainNode.connect(analyser);
             analyser.connect(audioCtx.destination);
 
+            // Crear y comenzar el detector de onsets
             const onsetDetector = new OnsetDetector(audioCtx, audioBuffer, 0.01);
             onsetDetector.start((flux) => {
                 console.log(`Onset detectado! Flux: ${flux}`);
-                // Trigger de contadores (como en tu ejemplo)
-                if(consethydra === 58) {
+                sequencer.trigger(audioCtx.currentTime);
+                vit.needsUpdate = true;
+
+                // Lógica personalizada de cambio de hydra
+                if (consethydra === 58) {
                     consethydra = 0;
                     sentido *= -1;
                     hydraSelect(hydraCount % 4);
-                    // console.log("Cambio realizado - sentido:", sentido);
                     hydraCount++;
+
+                    // Disparo del sequencer al detectar onset
                 }
+
                 consethydra++;
-            })
-            source.onended = function() {
+
+                // También puedes disparar el sequencer en *cada* onset si lo deseas:
+                // sequencer.trigger(audioCtx.currentTime);
+            });
+
+            source.onended = function () {
                 console.log('FIN');
-            
-                // 1. Ocultar el container (opuesto a "block")
+                onsetDetector.stop();
+
+                // Ocultar el contenedor, mostrar overlay y créditos
                 document.getElementById('container').style.display = "none";
-            
-                // 2. Mostrar overlay y credits (opuesto a "none")
-                overlay.style.display = "block"; // O "flex", "grid", etc., según tu CSS
+                overlay.style.display = "block";
                 credits.style.display = "block";
             };
 
+            // Iniciar el audio
             source.start(0);
+
+            // Activar la animación en el render loop
             renderer.setAnimationLoop(animate);
         })
         .catch(console.error);
 }
+
+
+function playGrain1(filePath) {
+    fetch(filePath)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            grain1.load(audioBuffer);
+            // grain1.set(0.25, 1.2, 0.08, 0.05, 0.15);
+            grain1.gain = 0.3; 
+            grain1.start()
+
+        })
+        .catch(console.error);
+}
+
 
 function onWindowResize() {
 
