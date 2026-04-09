@@ -23,6 +23,38 @@
   <canvas id="myCanvas" width="2000px" height="2000px"></canvas>
 
   <div id="repl" class="repl-hidden">
+    <div id="repl-header">
+      <span id="repl-title">control</span>
+      <button id="repl-info-btn" title="Ayuda">i</button>
+    </div>
+    <div id="repl-info" class="repl-info-hidden">
+      <div class="info-section">
+        <span class="info-label">motor granular</span>
+        <code>g1.start()</code>
+        <code>g1.stop()</code>
+        <code>g1.setPointer(0–1)</code>
+        <code>g1.setRate(0.1–4)</code>
+        <code>g1.setOverlaps(1–16)</code>
+        <code>g1.setWindowSizeAtTime(0.01–2)</code>
+        <code>g1.setAmp(0–1)</code>
+        <code>g1.setMasterAmp(0–1)</code>
+        <code>g1.setParamAtTime('randomPosition', 0–1)</code>
+        <code>g1.setParamAtTime('randomPitch', 0–1)</code>
+      </div>
+      <div class="info-section">
+        <span class="info-label">secuenciador</span>
+        <code>seq.setTempo(bpm)</code>
+        <code>seq.addPointerSequence([0, 0.5, 0.25], g1)</code>
+        <code>seq.addRateSequence([1, 1.5, 0.75], g1)</code>
+        <code>seq.addSequence('amp', [0.8, 0.3], g1)</code>
+        <code>seq.removeSequence('pointer', g1)</code>
+        <code>seq.start() &nbsp; seq.stop() &nbsp; seq.reset()</code>
+      </div>
+      <div class="info-section">
+        <span class="info-label">visual</span>
+        <code>hydraSelect(0–3)</code>
+      </div>
+    </div>
     <div id="repl-log"></div>
     <div id="repl-row">
       <span class="repl-prompt">&gt;</span>

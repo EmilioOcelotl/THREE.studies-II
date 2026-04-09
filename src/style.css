@@ -48,13 +48,41 @@ body {
     font-size: 20px;
 }
 
+/* Scrollbars del panel REPL */
+#repl-log,
+#repl-info {
+    scrollbar-width: thin;
+    scrollbar-color: #b2b2ff rgba(0, 0, 0, 0);
+}
+
+#repl-log::-webkit-scrollbar,
+#repl-info::-webkit-scrollbar {
+    width: 4px;
+}
+
+#repl-log::-webkit-scrollbar-track,
+#repl-info::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#repl-log::-webkit-scrollbar-thumb,
+#repl-info::-webkit-scrollbar-thumb {
+    background: rgba(178, 178, 255, 0.4);
+    border-radius: 2px;
+}
+
+#repl-log::-webkit-scrollbar-thumb:hover,
+#repl-info::-webkit-scrollbar-thumb:hover {
+    background: #b2b2ff;
+}
+
 /* Panel REPL */
 #repl {
     position: fixed;
     bottom: 1rem;
     right: 1rem;
     width: 380px;
-    max-height: 340px;
+    max-height: 520px;
     display: flex;
     flex-direction: column;
     background: rgba(0, 0, 0, 0.65);
@@ -72,14 +100,83 @@ body {
     display: none;
 }
 
+#repl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+#repl-title {
+    color: rgba(178, 178, 255, 0.6);
+    font-size: 10px;
+    user-select: none;
+    letter-spacing: 0.1em;
+}
+
+#repl-info-btn {
+    background: transparent;
+    border: 1px solid rgba(178, 178, 255, 0.5);
+    color: #b2b2ff;
+    font-family: monospace;
+    font-size: 11px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.2s, color 0.2s;
+}
+
+#repl-info-btn:hover,
+#repl-info-btn.active {
+    background: #b2b2ff;
+    color: #000;
+}
+
+/* Panel de info */
+#repl-info {
+    overflow-y: auto;
+    max-height: 220px;
+    border-bottom: 1px solid rgba(178, 178, 255, 0.3);
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+#repl-info.repl-info-hidden {
+    display: none;
+}
+
+.info-section {
+    margin-bottom: 0.6rem;
+}
+
+.info-label {
+    display: block;
+    color: rgba(255, 178, 255, 0.7);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.2rem;
+    user-select: none;
+}
+
+.info-section code {
+    display: block;
+    color: #b2b2ff;
+    font-size: 11px;
+    line-height: 1.7;
+    padding-left: 0.5rem;
+}
+
 #repl-log {
     flex: 1;
     overflow-y: auto;
     color: #b2b2ff;
     line-height: 1.5;
     margin-bottom: 0.4rem;
-    min-height: 80px;
-    max-height: 200px;
+    min-height: 60px;
+    max-height: 160px;
     word-break: break-all;
 }
 

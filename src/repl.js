@@ -63,9 +63,17 @@ function log(msg) {
 }
 
 export function setupREPL() {
-    const panel = document.getElementById('repl');
-    const input = document.getElementById('repl-input');
+    const panel   = document.getElementById('repl');
+    const input   = document.getElementById('repl-input');
+    const infoBtn = document.getElementById('repl-info-btn');
+    const infoEl  = document.getElementById('repl-info');
     if (!panel || !input) return;
+
+    // Toggle panel de info
+    infoBtn.addEventListener('click', () => {
+        infoEl.classList.toggle('repl-info-hidden');
+        infoBtn.classList.toggle('active');
+    });
 
     // Ctrl+Enter → evaluar
     input.addEventListener('keydown', e => {
