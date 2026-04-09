@@ -4,3 +4,6 @@ node_modules
 src/config.js
 jsm
 listaEnsayo.md
+config.js
+.claude
+CLAUDE.md

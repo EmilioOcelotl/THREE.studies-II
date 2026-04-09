@@ -2,7 +2,6 @@
   "name": "three.studies-ii",
   "version": "1.0.0",
   "description": "Invocaciones audiovisuales en el navegador.",
-  "main": "index.js",
   "scripts": {
     "start": "parcel ./src/index.html",
     "build": "parcel build ./src/index.html --public-url ./ --dist-dir docs"
@@ -15,7 +14,7 @@
     "osc": "^2.4.5",
     "parcel": "^2.12.0",
     "three": "^0.168.0",
-    "treslib": "^1.3.4",
+    "treslib": "file:../treslib",
     "ws": "^8.18.0"
   },
   "devDependencies": {

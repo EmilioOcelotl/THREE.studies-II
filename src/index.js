@@ -2,28 +2,26 @@ import * as THREE from 'three';
 import { EffectComposer } from '../jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from '../jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
-import Hydra from 'hydra-synth'
-// import { CSS2DRenderer, CSS2DObject } from '../jsm/renderers/CSS2DRenderer.js';
-import { OnsetDetector, Grain, Sequencer, Clock } from 'treslib';
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); // <- definido aquí
+import Hydra from 'hydra-synth';
+import { OnsetDetector } from '../../treslib/src/OnsetDetector.js';
+import { GrainEngine } from '../../treslib/src/GrainEngine.js';
+import { GrainSequencer } from '../../treslib/src/GrainSequencer.js';
+import { setupREPL } from './repl.js';
 
-const clock = new Clock(audioCtx);
-clock.start();
-const grain1 = new Grain(audioCtx);
-const sequence = [0, 0.1, 0.22, 0.05, 0.12, 0.02, 0, 0, 0.16, 1, 1, 1, 1]; // o cualquier contenido útil
+export const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-let source, bloomPass;
+export let g1 = null;
+export let g2 = null;
+export let seq = null;
 
+let bloomPass;
 let renderer, scene, camera, container;
 let originalPosition, points = [], analyser, rectGroup;
-let sequencer;
 let data = [];
-
 let ring, ring2, ring3, curve, curve2, curve3;
 let composer;
 let cubos = [];
-let avgFrequency, avgCount = 0, avgCount2 = 0, avgCount3 = 0;
-let label, label2, label3;
+let avgFrequency = 0, avgCount = 0;
 let consethydra = 0;
 let sentido = 1;
 let hydraCount = 0;
@@ -31,51 +29,37 @@ let hydraCount = 0;
 const hydra = new Hydra({
     canvas: document.getElementById("myCanvas"),
     detectAudio: false,
-    //makeGlobal: false
-}) // antes tenía .synth aqui 
+});
 
-let elCanvas = document.getElementById("myCanvas");
-vit = new THREE.CanvasTexture(elCanvas);
-elCanvas.style.display = 'none';
+let vit = new THREE.CanvasTexture(document.getElementById("myCanvas"));
+document.getElementById("myCanvas").style.display = 'none';
 
 const startButton = document.getElementById('startButton');
 startButton.addEventListener('click', init);
 
 function init() {
     hydraSelect(0);
-    const overlay = document.getElementById('overlay');
-    overlay.style.display = "none";
-
-    const credits = document.getElementById('credits');
-    credits.style.display = "none";
-
+    document.getElementById('overlay').style.display = "none";
+    document.getElementById('credits').style.display = "none";
     document.getElementById('container').style.display = "block";
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // scene.background = vit;
-    //composer.render();
 
     const ambient = new THREE.HemisphereLight(0xffffff, 1);
     scene.add(ambient);
 
-    // Crear una geometría de esfera y un material de puntos
-    const geometry = new THREE.SphereGeometry(15, 128, 128); // Aumenta el detalle de la esfera
-
-    //const loader = new THREE.TextureLoader();
-    //const spriteTexture = loader.load(spriteImage);
-
+    const geometry = new THREE.SphereGeometry(15, 128, 128);
     const material = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.6, // Tamaño de cada partícula
+        size: 0.6,
         map: vit,
-        //transparent: true, // Para manejar la transparencia del sprite
-        alphaTest: 0.5, // Ajusta para evitar el renderizado de pixeles transparentes
-        blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
+        alphaTest: 0.5,
+        blending: THREE.AdditiveBlending
     });
 
     const positionAttribute = geometry.attributes.position;
-    originalPosition = Float32Array.from(positionAttribute.array); // Guardamos las posiciones originales
+    originalPosition = Float32Array.from(positionAttribute.array);
 
     points = new THREE.Points(geometry, material);
     scene.add(points);
@@ -85,52 +69,39 @@ function init() {
     renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-    //renderer.toneMapping = THREE.ReinhardToneMapping;
-
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; // El más equilibrado para HDR
-    renderer.toneMappingExposure = Math.pow(0.3, 2.0); // 0.027 (más manejable)
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = Math.pow(0.3, 2.0);
 
     container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    rectGroup = new THREE.Group(); // Grupo para contener los rectángulos
-    createFloatingRectangles(10); // Puedes ajustar el número de rectángulos
+    rectGroup = new THREE.Group();
+    createFloatingRectangles(10);
     scene.add(rectGroup);
 
-    const numBamboos = 15; // Cambia para ajustar el número de bamboos
-    const radius = 100; // Cambia para ajustar el radio de la circunferencia
-    const bambooHeight = 500; // Altura de cada bamboo
-    const bambooWidth = 0.25; // Ancho de cada bamboo
-
+    const numBamboos = 15;
+    const bambooRadius = 100;
+    const bambooHeight = 500;
+    const bambooWidth = 0.25;
     const bambooMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
     for (let i = 0; i < numBamboos; i++) {
-        // Calcula la posición de cada bamboo
         const angle = (i / numBamboos) * Math.PI * 2;
-        const x = radius * Math.cos(angle);
-        const z = radius * Math.sin(angle);
-
-        // Crear geometría del bamboo
-        const geometry = new THREE.BoxGeometry(bambooWidth, bambooHeight, bambooWidth);
-        const bamboo = new THREE.Mesh(geometry, bambooMaterial);
-
-        // Coloca y rota el bamboo
-        bamboo.position.set(x, 0, z); // Ajusta la altura para que toque el suelo
-        bamboo.lookAt(0, 0, 0); // Hace que cada bamboo mire hacia el centro
-
-        // Genera una inclinación aleatoria para el bamboo
-        const tiltAngle = (Math.random() - 0.5) * Math.PI / 0.5; // Cambia este valor para ajustar el rango de inclinación
-        bamboo.rotation.x = tiltAngle; // Rota en el eje X
-
-        // Añade el bamboo a la escena
+        const x = bambooRadius * Math.cos(angle);
+        const z = bambooRadius * Math.sin(angle);
+        const bambooGeom = new THREE.BoxGeometry(bambooWidth, bambooHeight, bambooWidth);
+        const bamboo = new THREE.Mesh(bambooGeom, bambooMaterial);
+        bamboo.position.set(x, 0, z);
+        bamboo.lookAt(0, 0, 0);
+        const tiltAngle = (Math.random() - 0.5) * Math.PI / 0.5;
+        bamboo.rotation.x = tiltAngle;
         scene.add(bamboo);
     }
+
     window.addEventListener('resize', onWindowResize);
 
     playAudioFile("./audio/three-proc-mono-stereo.ogg");
-    playGrain1("./audio/insonora.mp3")
 
     const pointsCurve = [
         new THREE.Vector3(-100, 0, -50),
@@ -143,164 +114,97 @@ function init() {
     ];
 
     curve = new THREE.CatmullRomCurve3(pointsCurve, true);
-
-    // Generar la geometría de tubo
     const geometryTube = new THREE.TubeGeometry(curve, 400, 0.5, 8, false);
-    const materialTube = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit, wireframe: false });
-    const tube = new THREE.Mesh(geometryTube, materialTube);
-    scene.add(tube);
+    const materialTube = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+    scene.add(new THREE.Mesh(geometryTube, materialTube));
 
-    // Crear el primer tubo complementario (reflejado en el eje Y)
-    const complementPoints1 = pointsCurve.map(point => new THREE.Vector3(point.x, -point.y, point.z));
+    const complementPoints1 = pointsCurve.map(p => new THREE.Vector3(p.x, -p.y, p.z));
     curve2 = new THREE.CatmullRomCurve3(complementPoints1, true);
-    const geometryTubeComplement1 = new THREE.TubeGeometry(curve2, 400, 0.5, 8, false);
-    const materialTubeComplement1 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit, wireframe: false }); // Color complementario
-    const tubeComplement1 = new THREE.Mesh(geometryTubeComplement1, materialTubeComplement1);
-    scene.add(tubeComplement1);
+    const geometryTube2 = new THREE.TubeGeometry(curve2, 400, 0.5, 8, false);
+    const materialTube2 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+    scene.add(new THREE.Mesh(geometryTube2, materialTube2));
 
-    // Crear el segundo tubo complementario (reflejado en el eje Z)
-    const complementPoints2 = pointsCurve.map(point => new THREE.Vector3(point.x, point.y, -point.z));
+    const complementPoints2 = pointsCurve.map(p => new THREE.Vector3(p.x, p.y, -p.z));
     curve3 = new THREE.CatmullRomCurve3(complementPoints2, true);
-    const geometryTubeComplement2 = new THREE.TubeGeometry(curve3, 400, 0.5, 8, false);
-    const materialTubeComplement2 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit, wireframe: false }); // Otro color complementario
-    const tubeComplement2 = new THREE.Mesh(geometryTubeComplement2, materialTubeComplement2);
-    scene.add(tubeComplement2);
+    const geometryTube3 = new THREE.TubeGeometry(curve3, 400, 0.5, 8, false);
+    const materialTube3 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+    scene.add(new THREE.Mesh(geometryTube3, materialTube3));
 
-    const cylinderGeometry = new THREE.CylinderGeometry(0, 3.25, 12, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
-    ring = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+    const cylMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+    const cylGeom = new THREE.CylinderGeometry(0, 3.25, 12, 32);
+    ring = new THREE.Mesh(cylGeom, cylMat);
     scene.add(ring);
 
-    const cylinderGeometry2 = new THREE.CylinderGeometry(0, 3.25, 12, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial2 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
-    ring2 = new THREE.Mesh(cylinderGeometry2, cylinderMaterial2);
+    const cylMat2 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+    const cylGeom2 = new THREE.CylinderGeometry(0, 3.25, 12, 32);
+    ring2 = new THREE.Mesh(cylGeom2, cylMat2);
     scene.add(ring2);
 
-    const cylinderGeometry3 = new THREE.CylinderGeometry(0, 3.25, 12, 32); // (radio superior, radio inferior, altura, segmentos)
-    const cylinderMaterial3 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
-    ring3 = new THREE.Mesh(cylinderGeometry3, cylinderMaterial3);
+    const cylMat3 = new THREE.MeshBasicMaterial({ color: 0xffffff, map: vit });
+    const cylGeom3 = new THREE.CylinderGeometry(0, 3.25, 12, 32);
+    ring3 = new THREE.Mesh(cylGeom3, cylMat3);
     scene.add(ring3);
 
     composer = new EffectComposer(renderer);
-
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
+    composer.addPass(new RenderPass(scene, camera));
 
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.5, // Intensidad del bloom
-        0.6, // Radio
-        0.4 // Umbral
+        0.5, 0.6, 0.4
     );
-
     composer.addPass(bloomPass);
 
     createCubes();
-
-    /*
-    labelRenderer = new CSS2DRenderer();
-    labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    labelRenderer.domElement.style.position = 'absolute';
-    labelRenderer.domElement.style.top = '0px';
-    labelRenderer.domElement.style.pointerEvents = 'none';
-    document.getElementById('container').appendChild(labelRenderer.domElement);
-
-    let labeltext = document.createElement('div');
-    labeltext.className = 'label';
-    // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
-    labeltext.style.padding = '10px';
-    labeltext.style.borderRadius = '10px';
-    labeltext.style.margin = '-50px'; // Ajusta el margen según sea necesario
-    labeltext.style.color = 'rgb(255, 255, 255)'; // Cambia a azul oscuro
-    label = new CSS2DObject(labeltext);
-    scene.add(label);
-
-    //labeltext.style.border = '2px solid rgba(255, 255, 255, 1)'; // Contorno negro
-    let labeltext2 = document.createElement('div');
-    labeltext2.className = 'label';
-    // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
-    labeltext2.style.padding = '10px';
-    labeltext2.style.borderRadius = '10px';
-    labeltext2.style.margin = '-50px'; // Ajusta el margen según sea necesario
-    labeltext2.style.color = 'rgb(255, 255, 255)'; // Cambia a azul oscuro
-    label2 = new CSS2DObject(labeltext2);
-    scene.add(label2);
-
-    //labeltext.style.border = '2px solid rgba(255, 255, 255, 1)'; // Contorno negro
-    let labeltext3 = document.createElement('div');
-    labeltext3.className = 'label';
-    // labeltext.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Negro con transparencia
-    labeltext3.style.padding = '10px';
-    labeltext3.style.borderRadius = '10px';
-    labeltext3.style.margin = '-50px'; // Ajusta el margen según sea necesario
-    labeltext3.style.color = 'rgb(255, 255, 255)'; // Cambia a azul oscuro
-    label3 = new CSS2DObject(labeltext3);
-    scene.add(label3);
-    */
-
+    setupREPL();
 }
 
 function createCubes() {
     const xgrid = 3, ygrid = 4;
     const ux = 1 / xgrid;
     const uy = 1 / ygrid;
-    const xsize = 500 / xgrid;
-    const ysize = 500 / ygrid;
-    let materials = [];
-
     let cubeCount = 0;
-    let radius = 300; // Radio de la esfera
-    const totalCubes = xgrid * ygrid; // Número total de cubos
-    const phi = (1 + Math.sqrt(5)) / 2; // Proporción áurea
+    const radius = 300;
+    const totalCubes = xgrid * ygrid;
+    const phi = (1 + Math.sqrt(5)) / 2;
 
     for (let i = 0; i < xgrid; i++) {
         for (let j = 0; j < ygrid; j++) {
-            const geometry = new THREE.PlaneGeometry(30, 30, 40, 40); // Ancho, alto, segmentos en ancho, segmentos en alto
+            const geometry = new THREE.PlaneGeometry(30, 30, 40, 40);
             change_uvs(geometry, ux, uy, i, j);
+            applyDomeDeformation(geometry, 1.5);
 
-            // Aplica la deformación tipo cúpula
-            applyDomeDeformation(geometry, 1.5); // Intensidad ajustable
-
-            // Guarda las posiciones originales (ya deformadas)
             const originalPositions = new Float32Array(geometry.attributes.position.array);
 
-            materials[cubeCount] = new THREE.MeshBasicMaterial({
+            const mat = new THREE.MeshBasicMaterial({
                 map: vit,
-                wireframe: false, // Cambiar a true para debuggear la geometría
-                blending: THREE.AdditiveBlending // Mezclado para un efecto luminoso
-
+                blending: THREE.AdditiveBlending
             });
 
-            cubos[cubeCount] = new THREE.Mesh(geometry, materials[cubeCount]);
-
-            // Almacenar datos necesarios para la animación
+            cubos[cubeCount] = new THREE.Mesh(geometry, mat);
             cubos[cubeCount].userData = {
-                originalPositions: originalPositions,
-                displacementMultiplier: Math.random() * 10 + 5 // Variabilidad entre cubos
+                originalPositions,
+                displacementMultiplier: Math.random() * 10 + 5
             };
 
             const index = cubeCount;
             const theta = 2 * Math.PI * index / phi;
             const phiAngle = Math.acos(1 - 2 * index / totalCubes);
 
-            const x = radius * Math.sin(phiAngle) * Math.cos(theta);
-            const y = radius * Math.sin(phiAngle) * Math.sin(theta);
-            const z = radius * Math.cos(phiAngle);
+            cubos[cubeCount].position.set(
+                radius * Math.sin(phiAngle) * Math.cos(theta),
+                radius * Math.sin(phiAngle) * Math.sin(theta),
+                radius * Math.cos(phiAngle)
+            );
 
-            cubos[cubeCount].position.set(x, y, z);
-
-            // Variabilidad en escala y rotación
             const randScale = Math.random() * 4 + 2;
             cubos[cubeCount].scale.set(randScale * 2, randScale * 2, 1);
 
-            // Rotación inicial aleatoria
             cubos[cubeCount].rotation.set(
                 Math.random() * Math.PI * 1.2,
                 Math.random() * Math.PI * 1.2,
                 Math.random() * Math.PI * 1.2
             );
 
-            // Todos miran hacia el centro pero con variaciones
             cubos[cubeCount].lookAt(
                 (Math.random() - 0.5) * 20,
                 (Math.random() - 0.5) * 20,
@@ -312,69 +216,55 @@ function createCubes() {
         }
     }
 
-    // Función de actualización de vértices optimizada (sin análisis de textura)
     window.updateCubeVertices = function () {
-        const time = Date.now() * 0.001; // Tiempo para animaciones dinámicas
+        const time = Date.now() * 0.001;
 
         cubos.forEach(cube => {
             const geometry = cube.geometry;
             const positionAttribute = geometry.attributes.position;
             const positions = positionAttribute.array;
             const originalPositions = cube.userData.originalPositions;
-            const displacementStrength = cube.userData.displacementMultiplier * (1 + Math.sin(time * 0.5) * 0.3); // Variación dinámica
+            const displacementStrength = cube.userData.displacementMultiplier * (1 + Math.sin(time * 0.5) * 0.3);
 
             for (let i = 0; i < positions.length; i += 3) {
-                // Restaurar posición original
-                positions[i] = originalPositions[i];
+                positions[i]     = originalPositions[i];
                 positions[i + 1] = originalPositions[i + 1];
                 positions[i + 2] = originalPositions[i + 2];
 
-                // Aplicar desplazamiento aleatorio/dinámico
                 const waveEffect = Math.sin(time + i * 0.2) * 0.1;
                 const displacement = waveEffect * displacementStrength;
 
-                positions[i] += displacement * (0.5 + Math.sin(time * 0.3 + i) * 0.1);
+                positions[i]     += displacement * (0.5 + Math.sin(time * 0.3 + i) * 0.1);
                 positions[i + 1] += displacement * (0.5 + Math.cos(time * 0.35 + i) * 0.1);
                 positions[i + 2] += displacement * (0.7 + Math.sin(time * 0.4 + i) * 0.1);
             }
 
             positionAttribute.needsUpdate = true;
-            geometry.computeVertexNormals();
         });
     };
 }
 
 function applyDomeDeformation(geometry, intensity = 1.0) {
     const positions = geometry.attributes.position.array;
-    const center = new THREE.Vector3(0, 0, 0); // Centro del plano
 
     for (let i = 0; i < positions.length; i += 3) {
         const x = positions[i];
         const y = positions[i + 1];
-
-        // Distancia desde el centro del plano (normalizada)
-        const distance = Math.sqrt(x * x + y * y) / 15; // Ajusta el divisor para controlar la escala
-
-        // Función de curvatura (puedes usar seno, coseno, o una parábola)
-        const curvature = Math.cos(distance * Math.PI * 0.5) * intensity * 200; // Ajusta el multiplicador
-
-        // Aplica la deformación en el eje Z (como una cúpula)
-        positions[i + 2] = curvature * (0.5 + Math.sin(x * y * 0.01) * 0.3); // Variación orgánica
+        const distance = Math.sqrt(x * x + y * y) / 15;
+        const curvature = Math.cos(distance * Math.PI * 0.5) * intensity * 200;
+        positions[i + 2] = curvature * (0.5 + Math.sin(x * y * 0.01) * 0.3);
     }
 
     geometry.attributes.position.needsUpdate = true;
-    geometry.computeVertexNormals(); // ¡Importante para que la iluminación funcione!
+    geometry.computeVertexNormals();
 }
 
 function change_uvs(geometry, unitx, unity, offsetx, offsety) {
-
     const uvs = geometry.attributes.uv.array;
-
     for (let i = 0; i < uvs.length; i += 2) {
-        uvs[i] = (uvs[i] + offsetx) * unitx;
+        uvs[i]     = (uvs[i] + offsetx) * unitx;
         uvs[i + 1] = (uvs[i + 1] + offsety) * unity;
     }
-
 }
 
 function createFloatingRectangles(num) {
@@ -382,171 +272,117 @@ function createFloatingRectangles(num) {
     const phi = (1 + Math.sqrt(5)) / 2;
 
     for (let i = 0; i < num; i++) {
-        const width = Math.random() * 80 + 25;
+        const width  = Math.random() * 80 + 25;
         const height = Math.random() * 80 + 25;
-
         const rectGeometry = new THREE.PlaneGeometry(width, height);
         const edges = new THREE.EdgesGeometry(rectGeometry);
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 6 });
         const wireframe = new THREE.LineSegments(edges, lineMaterial);
 
-        const theta = 2 * Math.PI * i / phi; // Ángulo azimutal
-        const phiAngle = Math.acos(1 - 2 * i / num); // Ángulo polar
+        const theta    = 2 * Math.PI * i / phi;
+        const phiAngle = Math.acos(1 - 2 * i / num);
 
-        const x = radius * Math.sin(phiAngle) * Math.cos(theta);
-        const y = radius * Math.sin(phiAngle) * Math.sin(theta);
-        const z = radius * Math.cos(phiAngle);
-
-        wireframe.position.set(x, y, z);
+        wireframe.position.set(
+            radius * Math.sin(phiAngle) * Math.cos(theta),
+            radius * Math.sin(phiAngle) * Math.sin(theta),
+            radius * Math.cos(phiAngle)
+        );
         wireframe.lookAt(0, 0, 0);
         rectGroup.add(wireframe);
     }
 }
 
 function animate() {
-
     analyser.getByteFrequencyData(data);
 
-    //const avgFrequency2 = g1.getAvgFrequency(); // Asegúrate de que esta función esté definida
-    // console.log("Promedio de frecuencia granulador:", avgFrequency2);
-    //avgCount2 = (avgCount2 + avgFrequency2) * 1;
+    avgFrequency = 0;
+    for (let i = 0; i < data.length; i++) avgFrequency += data[i];
+    avgFrequency /= data.length;
 
-    //const avgFrequency3 = g2.getAvgFrequency(); // Asegúrate de que esta función esté definida
-    // console.log("Promedio de frecuencia granulador:", avgFrequency2);
-    //avgCount3 = (avgCount3 + avgFrequency3) * 1;
+    avgCount = (avgCount + avgFrequency) % 100000;
 
-    avgFrequency = (data.reduce((sum, value) => sum + value, 0) / data.length) * 1;
-    avgCount = (avgCount + avgFrequency) * 1;
-    // renderer.toneMappingExposure = Math.pow(avgFrequency * 0.1, 4.0) + 0.001; 
     bloomPass.strength = Math.sqrt(avgFrequency * 0.02) * 0.6;
 
     const positionAttribute = points.geometry.attributes.position;
     const position = positionAttribute.array;
-    // const time = performance.now() * 0.0005;
 
-    const noiseStrength = 0.2;  // Ajustamos la fuerza de la oscilación
-    const freqStrength = 4;   // Reduzco el impacto del audio en la deformación
+    const noiseStrength = 0.2;
+    const freqStrength  = 4;
 
-    const minScale = 0.77; // Escala mínima cuando no hay sonido
-    const maxScale = 1 + avgFrequency / 256; // Escala máxima cuando hay mucho sonido
+    const minScale = 0.77;
+    const maxScale = 1 + avgFrequency / 256;
     const scaleMultiplier = THREE.MathUtils.lerp(minScale, maxScale, avgFrequency / 256);
 
     for (let i = 0; i < position.length; i += 3) {
-        // Obtenemos las posiciones originales
         const origX = originalPosition[i];
         const origY = originalPosition[i + 1];
         const origZ = originalPosition[i + 2];
 
-        // Obtenemos el valor de frecuencia normalizado para este vértice
-        const freqValue = data[i % data.length] / 256;
-
-        // Curva exponencial para amplificar la respuesta del sonido
+        const freqValue  = data[i % data.length] / 256;
         const audioOffset = Math.pow(freqValue, 1) * freqStrength;
 
-        // Aplicamos oscilaciones sinusoidales
-        const sineOffset = Math.sin(origX * 0.3 + (avgCount / 1000)) * noiseStrength +
-            Math.cos(origY * 0.3 + (avgCount / 1000)) * noiseStrength +
-            Math.sin(origZ * 0.3 + (avgCount / 1000)) * noiseStrength;
+        const sineOffset =
+            Math.sin(origX * 0.3 + avgCount / 1000) * noiseStrength +
+            Math.cos(origY * 0.3 + avgCount / 1000) * noiseStrength +
+            Math.sin(origZ * 0.3 + avgCount / 1000) * noiseStrength;
 
         const totalOffset = sineOffset + audioOffset;
 
-        // Usamos lerp para suavizar la transición en los vértices
-        position[i] = THREE.MathUtils.lerp(position[i], origX + origX * totalOffset, 0.05);
+        position[i]     = THREE.MathUtils.lerp(position[i],     origX + origX * totalOffset, 0.05);
         position[i + 1] = THREE.MathUtils.lerp(position[i + 1], origY + origY * totalOffset, 0.05);
         position[i + 2] = THREE.MathUtils.lerp(position[i + 2], origZ + origZ * totalOffset, 0.05);
     }
 
     positionAttribute.needsUpdate = true;
 
-    // Escalar la esfera según la intensidad promedio del sonido
     points.scale.set(scaleMultiplier * 12, scaleMultiplier * 12, scaleMultiplier * 12);
 
-    //rectGroup.rotation.x += 0.0009;
-    //rectGroup.rotation.y -= 0.0016;
+    updateCubeVertices();
 
-    const stime = ((avgCount * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
-    const stime2 = ((avgCount2 * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
-    const stime3 = ((avgCount3 * 0.125) % 5000) / 5000;  // tiempo para mover el anillo
+    const stime  = ((avgCount * 0.125) % 5000) / 5000;
+    const stime2 = stime;
+    const stime3 = stime;
 
-    const point = curve.getPointAt(stime);     // obtener el punto en la curva
-    const tangent = curve.getTangentAt(stime); // obtener la dirección en el punto
-
+    const point = curve.getPointAt(stime);
     ring.position.set(point.x, point.y, point.z);
+    const tangent = curve.getTangentAt(stime);
+    ring.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent));
 
-    const axis = new THREE.Vector3(0, 1, 0); // eje inicial del cilindro
-    const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, tangent);
-    ring.quaternion.copy(quaternion);
-
-    const point2 = curve2.getPointAt(stime2);     // obtener el punto en la curva
-    const tangent2 = curve2.getTangentAt(stime2); // obtener la dirección en el punto
-
+    const point2 = curve2.getPointAt(stime2);
     ring2.position.set(point2.x, point2.y, point2.z);
+    const tangent2 = curve2.getTangentAt(stime2);
+    ring2.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent2));
 
-    const axis2 = new THREE.Vector3(0, 1, 0); // eje inicial del cilindro
-    const quaternion2 = new THREE.Quaternion().setFromUnitVectors(axis2, tangent2);
-    ring2.quaternion.copy(quaternion2);
-
-    const point3 = curve3.getPointAt(stime3);     // obtener el punto en la curva
-    const tangent3 = curve3.getTangentAt(stime3); // obtener la dirección en el punto
-
+    const point3 = curve3.getPointAt(stime3);
     ring3.position.set(point3.x, point3.y, point3.z);
+    const tangent3 = curve3.getTangentAt(stime3);
+    ring3.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent3));
 
-    const axis3 = new THREE.Vector3(0, 1, 0); // eje inicial del cilindro
-    const quaternion3 = new THREE.Quaternion().setFromUnitVectors(axis3, tangent3);
-    ring3.quaternion.copy(quaternion3);
+    const t = avgCount / 1000;
+    const amplitudeX = 1 + t;
+    const amplitudeY = 25;
+    const amplitudeZ = 1 + t;
+    const frequency  = 0.5;
 
-    const amplitudeX = 1 + (avgCount / 1000); // Amplitud mayor en X
-    const amplitudeY = 25;  // Amplitud menor en Y
-    const amplitudeZ = 1 + (avgCount / 1000);  // Amplitud media en Z
-
-    const frequency = 0.5; // Frecuencia baja para movimientos suaves
-
-    camera.position.x = amplitudeX * Math.sin((avgCount / 1000 * sentido) * frequency);
-    camera.position.y = amplitudeY * Math.sin((avgCount / 1000) * frequency * 0.5); // Movimiento más lento en Y
-    camera.position.z = amplitudeZ * Math.cos((avgCount / 1000 * sentido) * frequency);
-
+    camera.position.x = amplitudeX * Math.sin(t * sentido * frequency);
+    camera.position.y = amplitudeY * Math.sin(t * frequency * 0.5);
+    camera.position.z = amplitudeZ * Math.cos(t * sentido * frequency);
     camera.lookAt(ring.position);
 
-    /*
-    label.position.copy(ring.position);
-    label.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring.position.x.toFixed(2)} y: ${ring.position.y.toFixed(2)} z: ${ring.position.z.toFixed(2)}<br><br><br><br><br><br>`;
-
-    label2.position.copy(ring2.position);
-    label2.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring2.position.x.toFixed(2)} y: ${ring2.position.y.toFixed(2)} z: ${ring2.position.z.toFixed(2)}<br><br><br><br><br><br>`;
-
-    label3.position.copy(ring3.position);
-    label3.element.innerHTML = `&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp x: ${ring3.position.x.toFixed(2)} y: ${ring3.position.y.toFixed(2)} z: ${ring3.position.z.toFixed(2)}<br><br><br><br><br><br>`;
-*/
-
-    render();
-
     composer.render();
-    // labelRenderer.render(scene, camera);
-
-}
-
-function render() {
-    renderer.render(scene, camera);
-    // labelRenderer.render(scene, camera);
 }
 
 export function showCredits() {
-    // Elimina el canvas de Three.js
-    const container = document.getElementById('container');
-    container.remove();
-
+    document.getElementById('container').remove();
 
     const credits = document.createElement('div');
     credits.id = 'credits';
     credits.innerHTML = '';
     credits.style.display = 'block';
-
-    // Agregarlo al DOM
     document.body.appendChild(credits);
-
 }
 
-function hydraSelect(sketch) {
+export function hydraSelect(sketch) {
     switch (sketch) {
         case 0:
             osc(10, 0.04, 0.6)
@@ -576,7 +412,6 @@ function hydraSelect(sketch) {
                 .saturate(1.1)
                 .out();
             break;
-
         case 3:
             osc(10, 0.14, 0.4)
                 .color(2, 0.9 * 8, 0.8 * 4)
@@ -594,20 +429,11 @@ function playAudioFile(filePath) {
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
         .then(audioBuffer => {
-            console.log(audioCtx);
-
-            const sequencer = new Sequencer(sequence, (val, time) => {
-                console.log("Triggered value", val, "at", time);
-                grain1.set(val, 1, 0.1, 0.02, 0.1); 
-                grain1.gain = avgFrequency*10; 
-            });
-
-            // Crear el source y demás nodos
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
 
             const gainNode = audioCtx.createGain();
-            gainNode.gain.value = 0.3; // volumen
+            gainNode.gain.value = 0.3;
 
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 4096;
@@ -618,74 +444,50 @@ function playAudioFile(filePath) {
             gainNode.connect(analyser);
             analyser.connect(audioCtx.destination);
 
-            // Crear y comenzar el detector de onsets
             const onsetDetector = new OnsetDetector(audioCtx, audioBuffer, 0.01);
             onsetDetector.start((flux) => {
-                console.log(`Onset detectado! Flux: ${flux}`);
-                sequencer.trigger(audioCtx.currentTime);
                 vit.needsUpdate = true;
 
-                // Lógica personalizada de cambio de hydra
                 if (consethydra === 58) {
                     consethydra = 0;
                     sentido *= -1;
                     hydraSelect(hydraCount % 4);
                     hydraCount++;
-
-                    // Disparo del sequencer al detectar onset
                 }
-
                 consethydra++;
-
-                // También puedes disparar el sequencer en *cada* onset si lo deseas:
-                // sequencer.trigger(audioCtx.currentTime);
             });
 
             source.onended = function () {
-                console.log('FIN');
                 onsetDetector.stop();
-
-                // Ocultar el contenedor, mostrar overlay y créditos
                 document.getElementById('container').style.display = "none";
-                overlay.style.display = "block";
-                credits.style.display = "block";
+                document.getElementById('overlay').style.display = "block";
+                document.getElementById('credits').style.display = "block";
             };
 
-            // Iniciar el audio
-            source.start(0);
+            // Inicializar g1 con el mismo buffer del audio principal
+            g1 = new GrainEngine(audioCtx, audioBuffer, {
+                pointer: 0,
+                windowSize: 0.1,
+                overlaps: 8,
+                amp: 0.3,
+                randomPosition: 0.1,
+                randomPitch: 0.05
+            });
+            g1.connect(audioCtx.destination);
+            seq = new GrainSequencer(audioCtx, 120, 4);
+            window.dispatchEvent(new CustomEvent('g1ready'));
 
-            // Activar la animación en el render loop
+            source.start(0);
             renderer.setAnimationLoop(animate);
         })
         .catch(console.error);
 }
 
-
-function playGrain1(filePath) {
-    fetch(filePath)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-            grain1.load(audioBuffer);
-            // grain1.set(0.25, 1.2, 0.08, 0.05, 0.15);
-            grain1.gain = 0.3; 
-            grain1.start()
-
-        })
-        .catch(console.error);
-}
-
-
 function onWindowResize() {
-
-    const width = window.innerWidth;
+    const width  = window.innerWidth;
     const height = window.innerHeight;
-
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-
     renderer.setSize(width, height);
     composer.setSize(width, height);
-
-    // effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 }

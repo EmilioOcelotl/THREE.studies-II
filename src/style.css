@@ -42,8 +42,85 @@ body {
 }
 
 #credits {
-    margin-bottom: 20px; 
-    color: #b2b2ff; 
-    font-family: "Silkscreen", sans-serif; 
-    font-size: 20px; 
+    margin-bottom: 20px;
+    color: #b2b2ff;
+    font-family: "Silkscreen", sans-serif;
+    font-size: 20px;
+}
+
+/* Panel REPL */
+#repl {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    width: 380px;
+    max-height: 340px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #b2b2ff;
+    border-radius: 6px;
+    padding: 0.5rem;
+    z-index: 100;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+#repl.repl-hidden {
+    display: none;
+}
+
+#repl-log {
+    flex: 1;
+    overflow-y: auto;
+    color: #b2b2ff;
+    line-height: 1.5;
+    margin-bottom: 0.4rem;
+    min-height: 80px;
+    max-height: 200px;
+    word-break: break-all;
+}
+
+#repl-log .repl-error {
+    color: #ff7070;
+}
+
+#repl-log .repl-ok {
+    color: #b2b2ff;
+}
+
+#repl-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.3rem;
+    border-top: 1px solid rgba(178, 178, 255, 0.3);
+    padding-top: 0.4rem;
+}
+
+.repl-prompt {
+    color: #ffb2ff;
+    line-height: 1.6;
+    user-select: none;
+}
+
+#repl-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffb2ff;
+    font-family: monospace;
+    font-size: 12px;
+    resize: none;
+    line-height: 1.5;
+}
+
+#repl-hint {
+    margin-top: 0.3rem;
+    color: rgba(178, 178, 255, 0.45);
+    font-size: 10px;
+    text-align: right;
+    user-select: none;
 }
