@@ -2,9 +2,9 @@ dist
 node_modules
 .parcel-cache
 src/config.js
-jsm
 listaEnsayo.md
 config.js
 .claude
 CLAUDE.md
 docs
+bitacora
