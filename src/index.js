@@ -3,9 +3,9 @@ import { EffectComposer } from '../jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from '../jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import Hydra from 'hydra-synth';
-import { OnsetDetector } from '../../treslib/src/OnsetDetector.js';
-import { GrainEngine } from '../../treslib/src/GrainEngine.js';
-import { GrainSequencer } from '../../treslib/src/GrainSequencer.js';
+import { OnsetDetector } from 'treslib/src/OnsetDetector.js';
+import { GrainEngine } from 'treslib/src/GrainEngine.js';
+import { GrainSequencer } from 'treslib/src/GrainSequencer.js';
 import { setupREPL } from './repl.js';
 
 export const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -455,6 +455,11 @@ function playAudioFile(filePath) {
                     hydraCount++;
                 }
                 consethydra++;
+
+                if (seq && seq.sequences.length > 0) {
+                    seq.triggerStep(audioCtx.currentTime);
+                    seq.currentStep++;
+                }
             });
 
             source.onended = function () {

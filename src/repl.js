@@ -1,5 +1,5 @@
-import { GrainEngine } from '../../treslib/src/GrainEngine.js';
-import { GrainSequencer } from '../../treslib/src/GrainSequencer.js';
+import { GrainEngine } from 'treslib/src/GrainEngine.js';
+import { GrainSequencer } from 'treslib/src/GrainSequencer.js';
 import * as app from './index.js';
 
 const history = [];

@@ -14,7 +14,7 @@
     "osc": "^2.4.5",
     "parcel": "^2.12.0",
     "three": "^0.168.0",
-    "treslib": "file:../treslib",
+    "treslib": "^1.10.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {
